@@ -29,6 +29,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     private readonly ISystemClock _systemClock;
     private readonly bool _disconnectOnStop;
     private readonly IPlayerLifecycle _playerLifecycle;
+    private readonly ILavalinkVoiceServerInterceptor _voiceServerInterceptor;
     private int _disposed;
     private DateTimeOffset _syncedAt;
     private TimeSpan _unstretchedRelativePosition;
@@ -56,7 +57,9 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         _systemClock = properties.SystemClock;
         _logger = properties.Logger;
         _syncedAt = properties.SystemClock.UtcNow;
+
         _playerLifecycle = properties.Lifecycle;
+        _voiceServerInterceptor = properties.VoiceServerInterceptor;
 
         _unstretchedRelativePosition = default;
         _connectedOnce = false;
@@ -646,17 +649,21 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         }
     }
 
-    protected virtual ValueTask NotifyVoiceServerUpdatedAsync(VoiceServer voiceServer, CancellationToken cancellationToken = default)
+    protected virtual async ValueTask NotifyVoiceServerUpdatedAsync(VoiceServer voiceServer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (_disposed is 1)
         {
-            return ValueTask.CompletedTask;
+            return;
         }
 
+        voiceServer = await _voiceServerInterceptor
+            .InterceptAsync(GuildId, voiceServer, cancellationToken)
+            .ConfigureAwait(false);
+
         VoiceServer = voiceServer;
-        return UpdateVoiceCredentialsAsync(cancellationToken);
+        await UpdateVoiceCredentialsAsync(cancellationToken).ConfigureAwait(false);
     }
 
     ValueTask ILavalinkPlayerListener.NotifyVoiceStateUpdatedAsync(VoiceState voiceState, CancellationToken cancellationToken)

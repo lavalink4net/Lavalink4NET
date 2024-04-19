@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ILavalinkApiClientProvider, LavalinkApiClientProvider>();
         services.TryAddSingleton<ILavalinkSessionProvider, LavalinkSessionProvider>();
         services.TryAddSingleton<IReconnectStrategy, ExponentialBackoffReconnectStrategy>();
+        services.TryAddSingleton<ILavalinkVoiceServerInterceptor, LavalinkVoiceServerInterceptor>();
 
         services.AddHostedService<AudioServiceHost>();
 

@@ -30,6 +30,8 @@ public interface IPlayerProperties<out TPlayer, out TOptions>
 
     IServiceProvider? ServiceProvider { get; }
 
+    ILavalinkVoiceServerInterceptor VoiceServerInterceptor { get; }
+
     ulong VoiceChannelId { get; }
 
     string SessionId { get; }
