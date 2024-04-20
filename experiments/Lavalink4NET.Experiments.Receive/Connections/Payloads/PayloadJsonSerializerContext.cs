@@ -11,6 +11,8 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(SessionDescriptionPayload))]
 [JsonSerializable(typeof(ImmutableArray<int>))]
 [JsonSerializable(typeof(SpeakingPayload))]
+[JsonSerializable(typeof(ResumePayload))]
+[JsonSerializable(typeof(ResumedPayload))]
 internal sealed partial class PayloadJsonSerializerContext : JsonSerializerContext
 {
 }
