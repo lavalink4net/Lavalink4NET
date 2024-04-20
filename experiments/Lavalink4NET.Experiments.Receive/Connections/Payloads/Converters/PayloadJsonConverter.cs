@@ -53,6 +53,8 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         {
             0 => JsonSerializer.Deserialize<IdentifyPayload>(ref reader, options) as IVoicePayload,
             2 => JsonSerializer.Deserialize<ReadyPayload>(ref reader, options),
+            3 => new HeartbeatPayload { SequenceNumber = reader.GetUInt64(), },
+            6 => new HeartbeatAckPayload { SequenceNumber = reader.GetUInt64(), },
             8 => JsonSerializer.Deserialize<HelloPayload>(ref reader, options),
             _ => throw new JsonException($"Unknown operation code: {op}.")
         };
@@ -73,6 +75,8 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         {
             IdentifyPayload _ => 0,
             ReadyPayload _ => 2,
+            HeartbeatPayload _ => 3,
+            HeartbeatAckPayload _ => 6,
             HelloPayload _ => 8,
             _ => throw new JsonException("Unknown payload type.")
         };
@@ -80,7 +84,18 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         writer.WriteNumber("op", opCode);
         writer.WritePropertyName("d");
 
-        JsonSerializer.Serialize(writer, value, value.GetType(), options);
+        if (value is HeartbeatPayload heartbeatPayload)
+        {
+            writer.WriteNumberValue(heartbeatPayload.SequenceNumber);
+        }
+        else if (value is HeartbeatAckPayload heartbeatAckPayload)
+        {
+            writer.WriteNumberValue(heartbeatAckPayload.SequenceNumber);
+        }
+        else
+        {
+            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+        }
 
         writer.WriteEndObject();
     }
