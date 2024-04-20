@@ -1,4 +1,4 @@
-﻿namespace Lavalink4NET.Experiments.Receive;
+﻿namespace Lavalink4NET.Experiments.Receive.Sessions;
 
 using Lavalink4NET.Clients;
 

@@ -1,7 +1,8 @@
-﻿namespace Lavalink4NET.Experiments.Receive;
+﻿namespace Lavalink4NET.Experiments.Receive.Server;
 
 using System;
 using System.Diagnostics.Metrics;
+using Lavalink4NET.Experiments.Receive.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebSockets;
@@ -13,18 +14,18 @@ using Microsoft.Net.Http.Headers;
 internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILavalinkVoiceServer
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly IVoiceServerSessionManager _serverSessionManager;
+    private readonly IVoiceConnectionHandler _voiceConnectionHandler;
     private readonly IServer _server;
     private readonly WebSocketMiddleware _webSocketMiddleware;
 
     public LavalinkVoiceServer(
-        IVoiceServerSessionManager serverSessionManager,
+        IVoiceConnectionHandler voiceConnectionHandler,
         ILoggerFactory loggerFactory,
         IOptions<LavalinkVoiceServerOptions> options)
     {
-        ArgumentNullException.ThrowIfNull(serverSessionManager);
+        ArgumentNullException.ThrowIfNull(voiceConnectionHandler);
 
-        _serverSessionManager = serverSessionManager;
+        _voiceConnectionHandler = voiceConnectionHandler;
 
         var services = new ServiceCollection();
 
@@ -40,7 +41,7 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
 
         builder.UseKestrel((context, serverOptions) =>
         {
-            serverOptions.Listen(options.Value.BindAddress, options.Value.Port, x => x.UseHttps());
+            serverOptions.ListenLocalhost(options.Value.Port, x => x.UseHttps());
         });
 
         var webSocketOptions = new WebSocketOptions { };
@@ -90,23 +91,12 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        if (httpContext.Request.Path.Equals("/"))
+        if (!httpContext.Request.Query.TryGetValue("v", out var versionValue))
         {
             httpContext.Response.StatusCode = StatusCodes.Status200OK;
 
             await httpContext.Response
                 .WriteAsync("Lavalink4NET Voice Proxy Server")
-                .ConfigureAwait(false);
-
-            return;
-        }
-
-        if (!httpContext.Request.Path.Equals("/voice"))
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-
-            await httpContext.Response
-                .WriteAsync("Not Found")
                 .ConfigureAwait(false);
 
             return;
@@ -128,6 +118,10 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
 
         var webSocket = await httpContext.WebSockets
             .AcceptWebSocketAsync(webSocketAcceptContext)
+            .ConfigureAwait(false);
+
+        await _voiceConnectionHandler
+            .ProcessAsync(webSocket, cancellationToken)
             .ConfigureAwait(false);
     }
 }

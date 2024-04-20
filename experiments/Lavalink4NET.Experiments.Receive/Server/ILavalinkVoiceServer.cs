@@ -1,4 +1,4 @@
-﻿namespace Lavalink4NET.Experiments.Receive;
+﻿namespace Lavalink4NET.Experiments.Receive.Server;
 
 using System.Threading;
 using System.Threading.Tasks;

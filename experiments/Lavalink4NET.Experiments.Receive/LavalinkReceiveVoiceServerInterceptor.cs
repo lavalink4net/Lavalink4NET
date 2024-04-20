@@ -3,6 +3,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Lavalink4NET.Clients;
+using Lavalink4NET.Experiments.Receive.Server;
+using Lavalink4NET.Experiments.Receive.Sessions;
 using Lavalink4NET.Players;
 using Microsoft.Extensions.Options;
 
@@ -34,7 +36,7 @@ internal sealed class LavalinkReceiveVoiceServerInterceptor : ILavalinkVoiceServ
         cancellationToken.ThrowIfCancellationRequested();
 
         var sessionToken = _sessionManager.Allocate(guildId, voiceServer);
-        var proxiedVoiceServer = new VoiceServer(sessionToken.ToString("N"), $"{_options.BindAddress}:{_options.Port}");
+        var proxiedVoiceServer = new VoiceServer(sessionToken.ToString("N"), $"localhost:{_options.Port}");
 
         _logger.LogInformation(
             "Mapping voice server '{OriginalEndpoint}' ({OriginalToken}) to '{ProxiedEndpoint}' ({ProxiedToken})",
