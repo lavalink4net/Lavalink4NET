@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(SelectProtocolPayload))]
 [JsonSerializable(typeof(SessionDescriptionPayload))]
 [JsonSerializable(typeof(ImmutableArray<int>))]
+[JsonSerializable(typeof(SpeakingPayload))]
 internal sealed partial class PayloadJsonSerializerContext : JsonSerializerContext
 {
 }
