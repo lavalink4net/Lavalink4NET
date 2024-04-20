@@ -11,6 +11,7 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IVoiceServerSessionManager, VoiceServerSessionManager>();
         services.TryAddSingleton<ILavalinkVoiceServer, LavalinkVoiceServer>();
+        services.Configure<LavalinkVoiceServerOptions>(static _ => { });
 
         services.AddHostedService<LavalinkVoiceServerHost>();
 

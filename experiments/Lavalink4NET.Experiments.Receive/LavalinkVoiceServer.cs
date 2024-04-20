@@ -19,7 +19,8 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
 
     public LavalinkVoiceServer(
         IVoiceServerSessionManager serverSessionManager,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IOptions<LavalinkVoiceServerOptions> options)
     {
         ArgumentNullException.ThrowIfNull(serverSessionManager);
 
@@ -37,9 +38,9 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
 
         var builder = new LavalinkKestrelWebHostBuilder(services);
 
-        builder.UseKestrel((context, options) =>
+        builder.UseKestrel((context, serverOptions) =>
         {
-            options.ListenLocalhost(16389, x => x.UseHttps());
+            serverOptions.Listen(options.Value.BindAddress, options.Value.Port, x => x.UseHttps());
         });
 
         var webSocketOptions = new WebSocketOptions { };
