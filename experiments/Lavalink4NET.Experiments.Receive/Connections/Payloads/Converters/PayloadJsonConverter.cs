@@ -52,6 +52,7 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         var payload = op switch
         {
             0 => JsonSerializer.Deserialize<IdentifyPayload>(ref reader, options) as IVoicePayload,
+            1 => JsonSerializer.Deserialize<SelectProtocolPayload>(ref reader, options),
             2 => JsonSerializer.Deserialize<ReadyPayload>(ref reader, options),
             3 => new HeartbeatPayload { SequenceNumber = reader.GetUInt64(), },
             6 => new HeartbeatAckPayload { SequenceNumber = reader.GetUInt64(), },
@@ -74,6 +75,7 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         var opCode = value switch
         {
             IdentifyPayload _ => 0,
+            SelectProtocolPayload _ => 1,
             ReadyPayload _ => 2,
             HeartbeatPayload _ => 3,
             HeartbeatAckPayload _ => 6,

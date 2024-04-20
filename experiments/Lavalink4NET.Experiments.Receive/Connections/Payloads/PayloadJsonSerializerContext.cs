@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(IdentifyPayload))]
 [JsonSerializable(typeof(ReadyPayload))]
 [JsonSerializable(typeof(HelloPayload))]
+[JsonSerializable(typeof(SelectProtocolPayload))]
 internal sealed partial class PayloadJsonSerializerContext : JsonSerializerContext
 {
 }
