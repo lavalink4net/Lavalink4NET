@@ -1,17 +1,20 @@
 ﻿namespace Lavalink4NET.Experiments.Receive;
 
+using System;
+using System.Diagnostics.Metrics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
 using Microsoft.AspNetCore.WebSockets;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
-internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>
+internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILavalinkVoiceServer
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly IVoiceServerSessionManager _serverSessionManager;
-    private readonly KestrelServer _kestrelServer;
+    private readonly IServer _server;
     private readonly WebSocketMiddleware _webSocketMiddleware;
 
     public LavalinkVoiceServer(
@@ -22,16 +25,22 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>
 
         _serverSessionManager = serverSessionManager;
 
-        var kestrelServerOptions = new KestrelServerOptions { AddServerHeader = false, };
-        kestrelServerOptions.ListenLocalhost(16389);
+        var services = new ServiceCollection();
 
-        var socketTransportOptions = new SocketTransportOptions { Backlog = 4, };
-        var socketTransportFactory = new SocketTransportFactory(Options.Create(socketTransportOptions), loggerFactory);
+        // HTTP Kestrel Host
+        services.TryAddSingleton<IHostEnvironment, LavalinkWebHostEnvironment>();
+        services.TryAddSingleton<IMeterFactory, LavalinkMeterFactory>();
 
-        _kestrelServer = new KestrelServer(
-            options: Options.Create(kestrelServerOptions),
-            transportFactory: socketTransportFactory,
-            loggerFactory: loggerFactory);
+        // Logging
+        services.TryAddSingleton(loggerFactory);
+        services.TryAdd(ServiceDescriptor.Singleton(typeof(ILogger<>), typeof(Logger<>)));
+
+        var builder = new LavalinkKestrelWebHostBuilder(services);
+
+        builder.UseKestrel((context, options) =>
+        {
+            options.ListenLocalhost(16389, x => x.UseHttps());
+        });
 
         var webSocketOptions = new WebSocketOptions { };
 
@@ -39,18 +48,21 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>
             next: ProcessRequestInternalAsync,
             options: Options.Create(webSocketOptions),
             loggerFactory: loggerFactory);
+
+        _serviceProvider = services.BuildServiceProvider();
+        _server = _serviceProvider.GetRequiredService<IServer>();
     }
 
     public async ValueTask StartAsync(CancellationToken cancellationToken = default)
     {
-        await _kestrelServer
+        await _server
             .StartAsync(this, cancellationToken)
             .ConfigureAwait(false);
     }
 
     public async ValueTask StopAsync(CancellationToken cancellationToken = default)
     {
-        await _kestrelServer
+        await _server
             .StopAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -76,6 +88,28 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>
     private async Task ProcessRequestInternalAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
+
+        if (httpContext.Request.Path.Equals("/"))
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status200OK;
+
+            await httpContext.Response
+                .WriteAsync("Lavalink4NET Voice Proxy Server")
+                .ConfigureAwait(false);
+
+            return;
+        }
+
+        if (!httpContext.Request.Path.Equals("/voice"))
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+
+            await httpContext.Response
+                .WriteAsync("Not Found")
+                .ConfigureAwait(false);
+
+            return;
+        }
 
         var cancellationToken = httpContext.RequestAborted;
         cancellationToken.ThrowIfCancellationRequested();

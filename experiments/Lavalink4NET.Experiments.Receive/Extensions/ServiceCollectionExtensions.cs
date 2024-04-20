@@ -10,6 +10,10 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddSingleton<IVoiceServerSessionManager, VoiceServerSessionManager>();
+        services.TryAddSingleton<ILavalinkVoiceServer, LavalinkVoiceServer>();
+
+        services.AddHostedService<LavalinkVoiceServerHost>();
+
         services.Replace(ServiceDescriptor.Singleton<ILavalinkVoiceServerInterceptor, LavalinkReceiveVoiceServerInterceptor>());
 
         return services;
