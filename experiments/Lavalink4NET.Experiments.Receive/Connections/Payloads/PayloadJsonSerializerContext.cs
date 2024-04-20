@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(IVoicePayload))]
 [JsonSerializable(typeof(IdentifyPayload))]
 [JsonSerializable(typeof(ReadyPayload))]
+[JsonSerializable(typeof(HelloPayload))]
 internal sealed partial class PayloadJsonSerializerContext : JsonSerializerContext
 {
 }

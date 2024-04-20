@@ -53,6 +53,7 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         {
             0 => JsonSerializer.Deserialize<IdentifyPayload>(ref reader, options) as IVoicePayload,
             2 => JsonSerializer.Deserialize<ReadyPayload>(ref reader, options),
+            8 => JsonSerializer.Deserialize<HelloPayload>(ref reader, options),
             _ => throw new JsonException($"Unknown operation code: {op}.")
         };
 
@@ -72,6 +73,7 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
         {
             IdentifyPayload _ => 0,
             ReadyPayload _ => 2,
+            HelloPayload _ => 8,
             _ => throw new JsonException("Unknown payload type.")
         };
 
