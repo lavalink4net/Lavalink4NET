@@ -8,4 +8,9 @@ internal interface IVoiceProtocolHandler
     ValueTask<IVoicePayload> ReadAsync(
         WebSocket webSocket,
         CancellationToken cancellationToken = default);
+
+    ValueTask WriteAsync(
+        WebSocket webSocket,
+        IVoicePayload payload,
+        CancellationToken cancellationToken = default);
 }
