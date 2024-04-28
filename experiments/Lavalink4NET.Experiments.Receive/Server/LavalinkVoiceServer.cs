@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using Lavalink4NET.Experiments.Receive.Connections;
+using Lavalink4NET.Experiments.Receive.Connections.Discovery;
 using Lavalink4NET.Experiments.Receive.Connections.Features;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -18,18 +19,20 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IVoiceConnectionHandler _voiceConnectionHandler;
+    private readonly IIpDiscoveryService _ipDiscoveryService;
     private readonly IServer _server;
     private readonly WebSocketMiddleware _webSocketMiddleware;
 
     public LavalinkVoiceServer(
         IVoiceConnectionHandler voiceConnectionHandler,
+        IIpDiscoveryService ipDiscoveryService,
         ILoggerFactory loggerFactory,
         IOptions<LavalinkVoiceServerOptions> options)
     {
         ArgumentNullException.ThrowIfNull(voiceConnectionHandler);
 
         _voiceConnectionHandler = voiceConnectionHandler;
-
+        _ipDiscoveryService = ipDiscoveryService;
         var services = new ServiceCollection();
 
         // HTTP Kestrel Host
@@ -140,7 +143,7 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
         connectionContext.Features.Set<IVoiceGatewayVersionFeature>(new VoiceGatewayVersionFeature(version));
 
         await _voiceConnectionHandler
-            .ProcessAsync(connectionContext, cancellationToken)
+            .ProcessAsync(connectionContext, new VoiceConnectionHandle(_ipDiscoveryService), cancellationToken)
             .ConfigureAwait(false);
     }
 }

@@ -66,7 +66,7 @@ internal sealed class VoiceProtocolHandler : IVoiceProtocolHandler
 
             if (!result.EndOfMessage)
             {
-                _logger.LogWarning(label, "[{Label}] Received a partial payload from voice gateway.");
+                _logger.LogWarning("[{Label}] Received a partial payload from voice gateway.", label);
 
                 await connectionContext.WebSocket
                     .CloseAsync(WebSocketCloseStatus.MessageTooBig, "Payload is too large.", cancellationToken)

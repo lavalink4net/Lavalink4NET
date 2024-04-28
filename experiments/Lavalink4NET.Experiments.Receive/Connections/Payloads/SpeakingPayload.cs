@@ -8,9 +8,8 @@ internal sealed record class SpeakingPayload : IVoicePayload
     [JsonPropertyName("speaking")]
     public required SpeakingFlags Flags { get; set; }
 
-    [JsonRequired]
     [JsonPropertyName("delay")]
-    public required int Delay { get; set; }
+    public int? Delay { get; set; }
 
     [JsonRequired]
     [JsonPropertyName("ssrc")]

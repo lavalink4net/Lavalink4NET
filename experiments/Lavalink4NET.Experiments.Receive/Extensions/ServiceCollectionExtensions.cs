@@ -1,6 +1,7 @@
 ﻿namespace Lavalink4NET.Experiments.Receive.Extensions;
 
 using Lavalink4NET.Experiments.Receive.Connections;
+using Lavalink4NET.Experiments.Receive.Connections.Discovery;
 using Lavalink4NET.Experiments.Receive.Server;
 using Lavalink4NET.Experiments.Receive.Sessions;
 using Lavalink4NET.Players;
@@ -17,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IVoiceConnectionHandler, VoiceConnectionHandler>();
 
         services.TryAddSingleton<ILavalinkVoiceServer, LavalinkVoiceServer>();
+        services.TryAddSingleton<IIpDiscoveryService, IpDiscoveryService>();
 
         services.Configure<LavalinkVoiceServerOptions>(static _ => { });
 

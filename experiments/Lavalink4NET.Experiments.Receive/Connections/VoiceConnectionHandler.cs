@@ -37,6 +37,7 @@ internal sealed class VoiceConnectionHandler : IVoiceConnectionHandler
 
     public async ValueTask ProcessAsync(
         VoiceConnectionContext connectionContext,
+        IVoiceConnectionHandle connectionHandle,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -110,8 +111,8 @@ internal sealed class VoiceConnectionHandler : IVoiceConnectionHandler
             .WriteAsync(remoteConnectionContext, remoteIdentifyPayload, cancellationToken)
             .ConfigureAwait(false);
 
-        var task1 = ProxyAsync(connectionContext, remoteConnectionContext, cancellationToken).AsTask();
-        var task2 = ProxyAsync(remoteConnectionContext, connectionContext, cancellationToken).AsTask();
+        var task1 = ProxyAsync(connectionContext, remoteConnectionContext, connectionHandle, isRemote: false, cancellationToken).AsTask();
+        var task2 = ProxyAsync(remoteConnectionContext, connectionContext, connectionHandle, isRemote: true, cancellationToken).AsTask();
 
         await Task
             .WhenAny(task1, task2)
@@ -121,6 +122,8 @@ internal sealed class VoiceConnectionHandler : IVoiceConnectionHandler
     private async ValueTask ProxyAsync(
         VoiceConnectionContext sourceConnectionContext,
         VoiceConnectionContext destinationConnectionContext,
+        IVoiceConnectionHandle connectionHandle,
+        bool isRemote = false,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -141,8 +144,53 @@ internal sealed class VoiceConnectionHandler : IVoiceConnectionHandler
                 break;
             }
 
+            var receivedPayload = result.Payload;
+
+            switch (receivedPayload)
+            {
+                case ReadyPayload payload when isRemote:
+                    var localEndPoint = await connectionHandle
+                        .SetReadyAsync(payload, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    receivedPayload = new ReadyPayload
+                    {
+                        Ssrc = payload.Ssrc,
+                        Ip = localEndPoint.Address.ToString(),
+                        Port = localEndPoint.Port,
+                        Modes = payload.Modes,
+                    };
+
+                    break;
+
+                case SessionDescriptionPayload payload when isRemote:
+                    await connectionHandle
+                        .SetSessionDescriptionAsync(payload, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    break;
+
+                case SelectProtocolPayload payload when !isRemote:
+                    var remoteEndPoint = await connectionHandle
+                        .SelectProtocolAsync(payload, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    receivedPayload = new SelectProtocolPayload
+                    {
+                        Data = new SelectProtocolData
+                        {
+                            Address = remoteEndPoint.Address.ToString(),
+                            Port = remoteEndPoint.Port,
+                            Mode = payload.Data.Mode,
+                        },
+                        Protocol = payload.Protocol,
+                    };
+
+                    break;
+            }
+
             await _protocolHandler
-                .WriteAsync(destinationConnectionContext, result.Payload, cancellationToken)
+                .WriteAsync(destinationConnectionContext, receivedPayload, cancellationToken)
                 .ConfigureAwait(false);
         }
     }

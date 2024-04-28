@@ -1,8 +1,9 @@
 ﻿namespace Lavalink4NET.Experiments.Receive.Connections;
 
-public interface IVoiceConnectionHandler
+internal interface IVoiceConnectionHandler
 {
     ValueTask ProcessAsync(
         VoiceConnectionContext connectionContext,
+        IVoiceConnectionHandle connectionHandle,
         CancellationToken cancellationToken = default);
 }
