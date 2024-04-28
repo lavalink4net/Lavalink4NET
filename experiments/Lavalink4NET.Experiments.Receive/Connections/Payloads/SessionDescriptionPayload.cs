@@ -10,6 +10,10 @@ internal sealed record class SessionDescriptionPayload : IVoicePayload
     public required string Mode { get; set; }
 
     [JsonRequired]
+    [JsonPropertyName("audio_codec")]
+    public required string AudioCodec { get; set; }
+
+    [JsonRequired]
     [JsonPropertyName("secret_key")]
     [JsonConverter(typeof(SecretKeyJsonConverter))]
     public required ReadOnlyMemory<byte> SecretKey { get; set; }
