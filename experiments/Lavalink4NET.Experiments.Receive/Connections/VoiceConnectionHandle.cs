@@ -88,13 +88,12 @@ internal sealed class VoiceConnectionHandle : IVoiceConnectionHandle
             return default;
         }
 
-        _localSocket!.Connect(new IPEndPoint(IPAddress.Parse(_selectProtocolPayload.Data.Address), _selectProtocolPayload.Data.Port));
         _ = ProxyAsync(_remoteSocket!, _localSocket!, cancellationToken).AsTask();
 
         return default;
     }
 
-    private async ValueTask HandleIpDiscoveryAsync(Socket sourceSocket, EndPoint endPoint, CancellationToken cancellationToken = default)
+    private async ValueTask HandleIpDiscoveryAsync(Socket sourceSocket, IPEndPoint endPoint, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(sourceSocket);
@@ -109,21 +108,24 @@ internal sealed class VoiceConnectionHandle : IVoiceConnectionHandle
 
         bufferWriter.Advance(8);
 
-        var localEndPoint = (IPEndPoint)sourceSocket.LocalEndPoint!;
-
         // Encode IP
         var ipContent = bufferWriter.GetMemory(64);
-        var encodedByteCount = Encoding.UTF8.GetBytes(localEndPoint.Address.ToString(), ipContent.Span);
+        var encodedByteCount = Encoding.UTF8.GetBytes(endPoint.Address.ToString(), ipContent.Span);
         ipContent.Span[encodedByteCount] = 0;
         bufferWriter.Advance(64);
 
         // Encode port
         var portContent = bufferWriter.GetMemory(2);
-        BinaryPrimitives.WriteUInt16BigEndian(portContent.Span, (ushort)localEndPoint.Port);
+        BinaryPrimitives.WriteUInt16BigEndian(portContent.Span, (ushort)endPoint.Port);
         bufferWriter.Advance(2);
 
+        if (!sourceSocket.Connected)
+        {
+            sourceSocket!.Connect(endPoint);
+        }
+
         await sourceSocket
-            .SendToAsync(bufferWriter.WrittenMemory, SocketFlags.None, endPoint, cancellationToken)
+            .SendAsync(bufferWriter.WrittenMemory, SocketFlags.None, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -150,13 +152,11 @@ internal sealed class VoiceConnectionHandle : IVoiceConnectionHandle
 
                 var data = new ReadOnlyMemory<byte>(buffer, 0, result.ReceivedBytes);
 
-                if (data.Length is 74 && data.Span[0..2].SequenceEqual(new byte[] { 0x00, 0x01, }))
+                if (sourceSocket == _localSocket && data.Length is 74 && data.Span[0..2].SequenceEqual(new byte[] { 0x00, 0x01, }))
                 {
-                    await HandleIpDiscoveryAsync(sourceSocket, result.RemoteEndPoint, cancellationToken).ConfigureAwait(false);
+                    await HandleIpDiscoveryAsync(sourceSocket, (IPEndPoint)result.RemoteEndPoint, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
-
-                Console.WriteLine(data.Length);
 
                 await destinationSocket
                     .SendAsync(data, SocketFlags.None, cancellationToken)
