@@ -2,7 +2,10 @@
 
 using System;
 using System.Diagnostics.Metrics;
+using System.Globalization;
 using Lavalink4NET.Experiments.Receive.Connections;
+using Lavalink4NET.Experiments.Receive.Connections.Features;
+using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebSockets;
@@ -114,14 +117,30 @@ internal sealed class LavalinkVoiceServer : IHttpApplication<HttpContext>, ILava
             return;
         }
 
+        if (!int.TryParse(versionValue.ToString(), CultureInfo.InvariantCulture, out var version) || version is not 3 and not 4)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+            await httpContext.Response
+                .WriteAsync("Invalid version parameter.")
+                .ConfigureAwait(false);
+
+            return;
+        }
+
         var webSocketAcceptContext = new WebSocketAcceptContext { };
 
         var webSocket = await httpContext.WebSockets
             .AcceptWebSocketAsync(webSocketAcceptContext)
             .ConfigureAwait(false);
 
+        var connectionContext = new VoiceConnectionContext(webSocket);
+
+        connectionContext.Features.Set(httpContext.Features.GetRequiredFeature<IConnectionIdFeature>());
+        connectionContext.Features.Set<IVoiceGatewayVersionFeature>(new VoiceGatewayVersionFeature(version));
+
         await _voiceConnectionHandler
-            .ProcessAsync(webSocket, cancellationToken)
+            .ProcessAsync(connectionContext, cancellationToken)
             .ConfigureAwait(false);
     }
 }

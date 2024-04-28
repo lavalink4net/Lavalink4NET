@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Lavalink4NET.Experiments.Receive": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:56958;http://localhost:56959"
+    }
+  }
+}

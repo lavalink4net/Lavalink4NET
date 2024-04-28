@@ -2,6 +2,7 @@
 
 using System;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
@@ -61,7 +62,7 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
             7 => JsonSerializer.Deserialize<ResumePayload>(ref reader, options),
             8 => JsonSerializer.Deserialize<HelloPayload>(ref reader, options),
             9 => new ResumedPayload(),
-            _ => throw new JsonException($"Unknown operation code: {op}.")
+            _ => new DynamicVoicePayload { OperationCode = op, Data = (JsonObject)JsonNode.Parse(ref reader)!, },
         };
 
         if (!reader.Read() || reader.TokenType != JsonTokenType.EndObject)
@@ -75,6 +76,24 @@ internal sealed class PayloadJsonConverter : JsonConverter<IVoicePayload>
     public override void Write(Utf8JsonWriter writer, IVoicePayload value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
+
+        if (value is DynamicVoicePayload dynamicPayload)
+        {
+            writer.WriteNumber("op", dynamicPayload.OperationCode);
+            writer.WritePropertyName("d");
+
+            if (dynamicPayload.Data is null)
+            {
+                writer.WriteNullValue();
+            }
+            else
+            {
+                dynamicPayload.Data.WriteTo(writer);
+            }
+
+            writer.WriteEndObject();
+            return;
+        }
 
         var opCode = value switch
         {

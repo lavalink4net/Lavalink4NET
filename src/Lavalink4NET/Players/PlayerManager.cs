@@ -136,6 +136,10 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
                 logger: _loggerFactory.CreateLogger<TPlayer>());
         }
 
+        await _playerContext.DiscordClient
+            .WaitForReadyAsync(cancellationToken)
+            .ConfigureAwait(false);
+
         var handle = _handles.GetOrAdd(guildId, Create);
 
         if (handle.Player?.VoiceChannelId != voiceChannelId)
