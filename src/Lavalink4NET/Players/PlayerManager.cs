@@ -30,11 +30,13 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
         IServiceProvider? serviceProvider,
         IDiscordClientWrapper discordClient,
         ILavalinkSessionProvider sessionProvider,
+        ILavalinkVoiceServerInterceptor voiceServerInterceptor,
         ISystemClock systemClock,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(sessionProvider);
+        ArgumentNullException.ThrowIfNull(voiceServerInterceptor);
         ArgumentNullException.ThrowIfNull(systemClock);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
@@ -49,7 +51,8 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
             SessionProvider: sessionProvider,
             DiscordClient: discordClient,
             SystemClock: systemClock,
-            LifecycleNotifier: this);
+            LifecycleNotifier: this,
+            VoiceServerInterceptor: voiceServerInterceptor);
 
         DiscordClient.VoiceStateUpdated += OnVoiceStateUpdated;
         DiscordClient.VoiceServerUpdated += OnVoiceServerUpdated;
@@ -132,6 +135,10 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
                 options: options,
                 logger: _loggerFactory.CreateLogger<TPlayer>());
         }
+
+        await _playerContext.DiscordClient
+            .WaitForReadyAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         var handle = _handles.GetOrAdd(guildId, Create);
 

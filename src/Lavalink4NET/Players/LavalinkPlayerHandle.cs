@@ -96,7 +96,9 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
             return;
         }
 
-        _voiceServer = voiceServer;
+        _voiceServer = await _playerContext.VoiceServerInterceptor
+            .InterceptAsync(_guildId, voiceServer, cancellationToken)
+            .ConfigureAwait(false);
 
         if (_voiceState is not null)
         {

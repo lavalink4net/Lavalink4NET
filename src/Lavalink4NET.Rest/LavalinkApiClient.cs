@@ -423,19 +423,6 @@ public sealed class LavalinkApiClient : LavalinkApiClientBase, ILavalinkApiClien
     }
 }
 
-internal sealed class RemoteLavalinkException : Exception
-{
-    private readonly string? _stackTrace;
-
-    public RemoteLavalinkException(string? message, string? stackTrace)
-        : base(message)
-    {
-        _stackTrace = stackTrace;
-    }
-
-    public override string? StackTrace => _stackTrace ?? base.StackTrace;
-}
-
 internal static class StrictSearchHelper
 {
     public static string Process(StrictSearchBehavior searchBehavior, string identifier, TrackSearchMode searchMode) => searchBehavior switch

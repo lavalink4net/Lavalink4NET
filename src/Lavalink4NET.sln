@@ -88,13 +88,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lavalink4NET.Integrations.L
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lavalink4NET.Integrations.Lavasrc.Tests", "..\tests\Lavalink4NET.Integrations.Lavasrc.Tests\Lavalink4NET.Integrations.Lavasrc.Tests.csproj", "{5779F765-5F0D-422C-984A-7E44EAE737C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lavalink4NET.NetCord", "Lavalink4NET.NetCord\Lavalink4NET.NetCord.csproj", "{8587F98B-CFE1-4559-9614-ED3B2B0C4F4E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lavalink4NET.NetCord", "Lavalink4NET.NetCord\Lavalink4NET.NetCord.csproj", "{8587F98B-CFE1-4559-9614-ED3B2B0C4F4E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lavalink4NET.Samples.NetCord", "..\samples\Lavalink4NET.Samples.NetCord\Lavalink4NET.Samples.NetCord.csproj", "{02FE863F-D979-439A-9A51-C4EA69D58D29}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lavalink4NET.Samples.NetCord", "..\samples\Lavalink4NET.Samples.NetCord\Lavalink4NET.Samples.NetCord.csproj", "{02FE863F-D979-439A-9A51-C4EA69D58D29}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lavalink4NET.Integrations.LyricsJava", "Lavalink4NET.Integrations.LyricsJava\Lavalink4NET.Integrations.LyricsJava.csproj", "{9A30E985-6D67-41D4-A12F-F1ADCD2ED0FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lavalink4NET.Integrations.LyricsJava", "Lavalink4NET.Integrations.LyricsJava\Lavalink4NET.Integrations.LyricsJava.csproj", "{9A30E985-6D67-41D4-A12F-F1ADCD2ED0FE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lavalink4NET.Integrations.LyricsJava.Tests", "Lavalink4NET.Integrations.LyricsJava.Tests\Lavalink4NET.Integrations.LyricsJava.Tests.csproj", "{176B0345-DF57-42B4-A8FD-4E6436D9554C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lavalink4NET.Integrations.LyricsJava.Tests", "Lavalink4NET.Integrations.LyricsJava.Tests\Lavalink4NET.Integrations.LyricsJava.Tests.csproj", "{176B0345-DF57-42B4-A8FD-4E6436D9554C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lavalink4NET.Experiments.Receive", "..\experiments\Lavalink4NET.Experiments.Receive\Lavalink4NET.Experiments.Receive.csproj", "{F7EC54EF-8C23-4586-BC86-D9B7B702CE14}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -258,6 +260,10 @@ Global
 		{176B0345-DF57-42B4-A8FD-4E6436D9554C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{176B0345-DF57-42B4-A8FD-4E6436D9554C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{176B0345-DF57-42B4-A8FD-4E6436D9554C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7EC54EF-8C23-4586-BC86-D9B7B702CE14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7EC54EF-8C23-4586-BC86-D9B7B702CE14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7EC54EF-8C23-4586-BC86-D9B7B702CE14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7EC54EF-8C23-4586-BC86-D9B7B702CE14}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

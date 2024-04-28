@@ -646,17 +646,17 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         }
     }
 
-    protected virtual ValueTask NotifyVoiceServerUpdatedAsync(VoiceServer voiceServer, CancellationToken cancellationToken = default)
+    protected virtual async ValueTask NotifyVoiceServerUpdatedAsync(VoiceServer voiceServer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (_disposed is 1)
         {
-            return ValueTask.CompletedTask;
+            return;
         }
 
         VoiceServer = voiceServer;
-        return UpdateVoiceCredentialsAsync(cancellationToken);
+        await UpdateVoiceCredentialsAsync(cancellationToken).ConfigureAwait(false);
     }
 
     ValueTask ILavalinkPlayerListener.NotifyVoiceStateUpdatedAsync(VoiceState voiceState, CancellationToken cancellationToken)

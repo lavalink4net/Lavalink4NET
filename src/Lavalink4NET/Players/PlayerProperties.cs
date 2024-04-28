@@ -28,4 +28,6 @@ internal sealed record class PlayerProperties<TPlayer, TOptions>(
     public IServiceProvider? ServiceProvider => Context.ServiceProvider;
 
     public ISystemClock SystemClock => Context.SystemClock;
+
+    public ILavalinkVoiceServerInterceptor VoiceServerInterceptor => Context.VoiceServerInterceptor;
 }

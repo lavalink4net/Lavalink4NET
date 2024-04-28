@@ -9,4 +9,5 @@ internal sealed record class PlayerContext(
     ILavalinkSessionProvider SessionProvider,
     IDiscordClientWrapper DiscordClient,
     ISystemClock SystemClock,
-    IPlayerLifecycleNotifier? LifecycleNotifier);
+    IPlayerLifecycleNotifier? LifecycleNotifier,
+    ILavalinkVoiceServerInterceptor VoiceServerInterceptor);
