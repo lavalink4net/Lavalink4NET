@@ -1,8 +1,9 @@
-﻿namespace Lavalink4NET.Extensions;
-
-using System;
+﻿using System;
+using DSharpPlus.Extensions;
 using Lavalink4NET.DSharpPlus;
 using Microsoft.Extensions.DependencyInjection;
+
+namespace Lavalink4NET.Extensions;
 
 /// <summary>
 /// A collection of extension methods for <see cref="IServiceCollection"/>.
@@ -17,6 +18,17 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddLavalink(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        return services.AddLavalink<DiscordClientWrapper>();
+        services.AddLavalink<DiscordClientWrapper>();
+
+        services.Configure<DiscordClientWrapper>(client =>
+            services.ConfigureEventHandlers(events =>
+            {
+                events.HandleGuildDownloadCompleted(client.OnGuildDownloadCompleted);
+                events.HandleVoiceServerUpdated(client.OnVoiceServerUpdated);
+                events.HandleVoiceStateUpdated(client.OnVoiceStateUpdated);
+            })
+        );
+
+        return services;
     }
 }

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <!-- Package Description -->
     <Description>High performance Lavalink wrapper for .NET | Add powerful audio playback to your DSharpPlus-based applications with this integration for Lavalink4NET. Suitable for end users developing with DSharpPlus.</Description>
@@ -10,7 +10,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="4.4.6" />
+    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02297" />
     <ProjectReference Include="../Lavalink4NET/Lavalink4NET.csproj" />
   </ItemGroup>
   <Import Project="../Lavalink4NET.targets" />

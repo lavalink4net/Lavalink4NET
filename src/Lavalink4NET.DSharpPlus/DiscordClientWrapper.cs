@@ -10,25 +10,24 @@ using global::DSharpPlus.EventArgs;
 using global::DSharpPlus.Exceptions;
 using global::DSharpPlus.Net.Abstractions;
 using Lavalink4NET.Clients;
-using Lavalink4NET.Clients.Events;
+using L4N = Clients.Events;
 using Lavalink4NET.Events;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Wraps a <see cref="DiscordClient"/> or <see cref="DiscordShardedClient"/> instance.
 /// </summary>
-public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
+public sealed class DiscordClientWrapper : IDiscordClientWrapper
 {
     /// <inheritdoc/>
-    public event AsyncEventHandler<VoiceServerUpdatedEventArgs>? VoiceServerUpdated;
+    public event AsyncEventHandler<L4N.VoiceServerUpdatedEventArgs>? VoiceServerUpdated;
 
     /// <inheritdoc/>
-    public event AsyncEventHandler<VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
+    public event AsyncEventHandler<L4N.VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
 
     private readonly object _client; // either DiscordShardedClient or DiscordClient
     private readonly ILogger<DiscordClientWrapper> _logger;
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
-    private bool _disposed;
 
     private DiscordClientWrapper(object discordClient, ILogger<DiscordClientWrapper> logger)
     {
@@ -49,11 +48,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
     public DiscordClientWrapper(DiscordClient discordClient, ILogger<DiscordClientWrapper> logger)
         : this((object)discordClient, logger)
     {
-        ArgumentNullException.ThrowIfNull(discordClient);
-
-        discordClient.VoiceStateUpdated += OnVoiceStateUpdated;
-        discordClient.VoiceServerUpdated += OnVoiceServerUpdated;
-        discordClient.GuildDownloadCompleted += OnGuildDownloadCompleted;
     }
 
     /// <summary>
@@ -64,11 +58,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
     public DiscordClientWrapper(DiscordShardedClient shardedDiscordClient, ILogger<DiscordClientWrapper> logger)
         : this((object)shardedDiscordClient, logger)
     {
-        ArgumentNullException.ThrowIfNull(shardedDiscordClient);
-
-        shardedDiscordClient.VoiceStateUpdated += OnVoiceStateUpdated;
-        shardedDiscordClient.VoiceServerUpdated += OnVoiceServerUpdated;
-        shardedDiscordClient.GuildDownloadCompleted += OnGuildDownloadCompleted;
     }
 
     /// <inheritdoc/>
@@ -155,35 +144,14 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
         return new(_readyTaskCompletionSource.Task.WaitAsync(cancellationToken));
     }
 
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
-
-        if (_client is DiscordClient discordClient)
-        {
-            discordClient.VoiceStateUpdated -= OnVoiceStateUpdated;
-            discordClient.VoiceServerUpdated -= OnVoiceServerUpdated;
-            discordClient.GuildDownloadCompleted -= OnGuildDownloadCompleted;
-        }
-        else if (_client is DiscordShardedClient shardedClient)
-        {
-            shardedClient.VoiceStateUpdated -= OnVoiceStateUpdated;
-            shardedClient.VoiceServerUpdated -= OnVoiceServerUpdated;
-            shardedClient.GuildDownloadCompleted -= OnGuildDownloadCompleted;
-        }
-    }
-
     private DiscordClient GetClientForGuild(ulong guildId) => _client is DiscordClient discordClient
         ? discordClient
         : ((DiscordShardedClient)_client).GetShard(guildId);
 
-    private Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs)
+    /// <summary>
+    /// Called when the Discord client finishes a guild download.
+    /// </summary>
+    public Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(eventArgs);
@@ -197,7 +165,10 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task OnVoiceServerUpdated(DiscordClient discordClient, VoiceServerUpdateEventArgs voiceServerUpdateEventArgs)
+    /// <summary>
+    /// Called when the Discord client's voice server is updated.
+    /// </summary>
+    public async Task OnVoiceServerUpdated(DiscordClient discordClient, VoiceServerUpdatedEventArgs voiceServerUpdateEventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(voiceServerUpdateEventArgs);
@@ -206,7 +177,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
             Token: voiceServerUpdateEventArgs.VoiceToken,
             Endpoint: voiceServerUpdateEventArgs.Endpoint);
 
-        var eventArgs = new VoiceServerUpdatedEventArgs(
+        var eventArgs = new L4N.VoiceServerUpdatedEventArgs(
             guildId: voiceServerUpdateEventArgs.Guild.Id,
             voiceServer: server);
 
@@ -215,7 +186,10 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
             .ConfigureAwait(false);
     }
 
-    private async Task OnVoiceStateUpdated(DiscordClient discordClient, VoiceStateUpdateEventArgs voiceStateUpdateEventArgs)
+    /// <summary>
+    /// Called when the Discord client's voice state is updated.
+    /// </summary>
+    public async Task OnVoiceStateUpdated(DiscordClient discordClient, VoiceStateUpdatedEventArgs voiceStateUpdateEventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(voiceStateUpdateEventArgs);
@@ -234,7 +208,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
             SessionId: sessionId);
 
         // invoke event
-        var eventArgs = new VoiceStateUpdatedEventArgs(
+        var eventArgs = new L4N.VoiceStateUpdatedEventArgs(
             guildId: voiceStateUpdateEventArgs.Guild.Id,
             userId: voiceStateUpdateEventArgs.User.Id,
             isCurrentUser: voiceStateUpdateEventArgs.User.Id == discordClient.CurrentUser.Id,
