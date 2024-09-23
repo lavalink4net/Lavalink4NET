@@ -12,12 +12,12 @@ public static class QueuedLavalinkPlayerExtensions
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var queueOffset = default(int?);
+        int? queueOffset = default;
 
         if (loadResult.Playlist is null)
         {
             // Single track
-            queueOffset ??= await player
+            queueOffset = await player
               .PlayAsync(loadResult.Track!, cancellationToken: cancellationToken)
               .ConfigureAwait(false);
         }
@@ -26,7 +26,7 @@ public static class QueuedLavalinkPlayerExtensions
             // Playlist
             foreach (var track in loadResult.Tracks)
             {
-                queueOffset ??= await player
+                queueOffset = await player
                   .PlayAsync(track, cancellationToken: cancellationToken)
                   .ConfigureAwait(false);
             }
