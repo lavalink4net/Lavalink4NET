@@ -2,9 +2,8 @@
 
 using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Buffers.Text;
-using System.Text.Unicode;
+using System.Text;
 
 public partial record class LavalinkTrack : ISpanFormattable
 {
@@ -16,5 +15,31 @@ public partial record class LavalinkTrack : ISpanFormattable
     public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
     {
         
+    }
+
+    internal static string EncodeDataToUtf16(byte[] data)
+    {
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(Base64.GetMaxEncodedToUtf8Length(data.Length));
+
+        try
+        {
+            var operationStatus = Base64.EncodeToUtf8(
+                data,
+                buffer,
+                out _,
+                out int bytesWritten
+            );
+
+            if (operationStatus is not OperationStatus.Done)
+                throw new InvalidOperationException("Error while encoding to Base64.");
+
+            // Gets Utf16 representation
+            return Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, 0, bytesWritten));
+        }
+
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 }

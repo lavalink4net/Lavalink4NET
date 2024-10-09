@@ -14,7 +14,91 @@ namespace Lavalink4NET.Tracks
     {
         public static LavalinkTrack Deserialize(byte[] data)
         {
+            using MemoryStream memStream = new(data);
+            using BinaryReader reader = new(memStream);
+            Dictionary<string, JsonElement> additionalInformationBuilder = new();
 
+            byte version = reader.ReadByte();
+            string title = reader.ReadString();
+            string author = reader.ReadString();
+            long durationMs = reader.ReadInt64();
+            string identifier = reader.ReadString();
+            bool isLiveStream = reader.ReadBoolean();
+            string rawUri = reader.ReadString();
+            string rawArtworkUri = reader.ReadString();
+            string isrc = reader.ReadString();
+            string sourceName = reader.ReadString();
+            string probeInfo = reader.ReadString();
+
+            if (IsExtendedTrack(sourceName))
+            {
+                using MemoryStream jsonStream = new();
+                using Utf8JsonWriter jsonWriter = new(jsonStream);
+                JsonObject json = new();
+
+                void ReadJson(string propertyName)
+                {
+                    string? propertyValue = reader.ReadString();
+
+                    if (propertyValue == string.Empty)
+                        propertyValue = null;
+
+                    // The additional information builder is filled with empty properties,
+                    // which are then assigned after the entire Json object has finished writing.
+                    json.Add(propertyName, propertyValue);
+                    additionalInformationBuilder.Add(propertyName, new());
+                }
+
+                ReadJson("albumName");
+                ReadJson("albumUrl");
+                ReadJson("artistUrl");
+                ReadJson("artistArtworkUrl");
+                ReadJson("previewUrl");
+
+                KeyValuePair<string, JsonNode?> isPreview = new("isPreview", reader.ReadBoolean());
+                json.Add(isPreview);
+                additionalInformationBuilder.Add(isPreview.Key, new());
+
+                json.WriteTo(jsonWriter);
+                var jsonReader = new Utf8JsonReader(jsonStream.ToArray());
+                var jsonDocument = JsonElement.ParseValue(ref jsonReader);
+
+                foreach (string property in additionalInformationBuilder.Keys)
+                {
+                    additionalInformationBuilder[property] = jsonDocument.GetProperty(property);
+                }
+            }
+
+            long startPositionMs = reader.ReadInt64();
+
+            TimeSpan duration = durationMs >= TimeSpan.MaxValue.TotalMilliseconds
+                    ? TimeSpan.MaxValue
+                    : TimeSpan.FromMilliseconds(durationMs);
+
+            TimeSpan? startPosition = startPositionMs is 0
+                    ? default(TimeSpan?)
+                    : TimeSpan.FromMilliseconds(startPositionMs);
+
+            Uri.TryCreate(rawUri, UriKind.Absolute, out var uri);
+            Uri.TryCreate(rawArtworkUri, UriKind.Absolute, out var artworkUri);
+
+            return new LavalinkTrack()
+            {
+                Author = author,
+                Identifier = identifier,
+                Title = title,
+                Duration = duration,
+                IsLiveStream = isLiveStream,
+                IsSeekable = !isLiveStream,
+                ProbeInfo = probeInfo,
+                SourceName = sourceName,
+                StartPosition = startPosition,
+                Uri = uri,
+                ArtworkUri = artworkUri,
+                Isrc = isrc,
+                AdditionalInformation = additionalInformationBuilder.ToImmutableDictionary(),
+                TrackData = EncodeDataToUtf16(data)
+            };
         }
 
         // These LEGACY regions are a temporary measure in place while I work on re-writing the serialization system.
@@ -153,14 +237,14 @@ namespace Lavalink4NET.Tracks
                 }
 
                 var data = new JsonObject
-            {
-                {"albumName", albumName },
-                {"albumUrl", rawAlbumUri },
-                {"artistUrl", rawArtistUri },
-                {"artistArtworkUrl", rawArtistArtworkUri },
-                {"previewUrl", rawPreviewUri },
-                {"isPreview", isPreview },
-            };
+                {
+                    {"albumName", albumName },
+                    {"albumUrl", rawAlbumUri },
+                    {"artistUrl", rawArtistUri },
+                    {"artistArtworkUrl", rawArtistArtworkUri },
+                    {"previewUrl", rawPreviewUri },
+                    {"isPreview", isPreview },
+                };
 
                 var bufferWriter = new ArrayBufferWriter<byte>();
                 using var utf8JsonWriter = new Utf8JsonWriter(bufferWriter);
