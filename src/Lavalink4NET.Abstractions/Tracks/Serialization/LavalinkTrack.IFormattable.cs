@@ -7,17 +7,30 @@ using System.Text;
 
 public partial record class LavalinkTrack : ISpanFormattable
 {
-    public string ToString(string? format, IFormatProvider? formatProvider)
-    {
-        
-    }
+    public string ToString(int? version) => Utf8ToUtf16(Serialize(version));
+
+    public override string ToString() => ToString(version: null);
+
+    public string ToString(string? format, IFormatProvider? formatProvider) => ToString();
 
     public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
     {
-        
+        try
+        {
+            string data = ToString();
+            data.CopyTo(destination);
+            charsWritten = data.Length;
+        }
+        catch
+        {
+            charsWritten = 0;
+            return false;
+        }
+
+        return true;
     }
 
-    internal static string EncodeDataToUtf16(byte[] data)
+    internal static string Utf8ToUtf16(byte[] data)
     {
         byte[] buffer = ArrayPool<byte>.Shared.Rent(Base64.GetMaxEncodedToUtf8Length(data.Length));
 

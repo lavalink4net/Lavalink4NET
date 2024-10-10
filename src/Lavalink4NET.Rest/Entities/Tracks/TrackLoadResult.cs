@@ -9,9 +9,9 @@ using Lavalink4NET.Tracks;
 public readonly record struct TrackLoadResult
 {
     private readonly object? _value; // either LavalinkTrack[] (immutable!), LavalinkTrack, or ExceptionData, null (no matches)
-    private readonly PlaylistInformation _playlist;
+    private readonly PlaylistInformation? _playlist;
 
-    public TrackLoadResult(object? value, PlaylistInformation playlist)
+    public TrackLoadResult(object? value, PlaylistInformation? playlist)
     {
         _value = value;
         _playlist = playlist;
@@ -42,7 +42,7 @@ public readonly record struct TrackLoadResult
     public ImmutableArray<LavalinkTrack> Tracks => _value switch
     {
         LavalinkTrack track => ImmutableArray.Create(track),
-        LavalinkTrack[] tracks => Unsafe.As<LavalinkTrack[], ImmutableArray<LavalinkTrack>>(ref Unsafe.AsRef(tracks)),
+        LavalinkTrack[] tracks => Unsafe.As<LavalinkTrack[], ImmutableArray<LavalinkTrack>>(ref Unsafe.AsRef(in tracks)),
         _ => ImmutableArray<LavalinkTrack>.Empty,
     };
 

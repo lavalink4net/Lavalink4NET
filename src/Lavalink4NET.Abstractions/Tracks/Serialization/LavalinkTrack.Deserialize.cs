@@ -1,19 +1,43 @@
-﻿using System.Buffers.Text;
-using System.Buffers;
-using System.Diagnostics;
+﻿using System.Buffers;
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Unicode;
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using System.Text.Json;
-using System.Buffers.Binary;
 
 namespace Lavalink4NET.Tracks
 {
     public partial record class LavalinkTrack
     {
-        public static LavalinkTrack Deserialize(byte[] data)
+        public static bool TryDeserialize(byte[] data, [MaybeNullWhen(false)] out LavalinkTrack track) => TryDeserialize(data, null, out track);
+
+        public static bool TryDeserialize(byte[] data, string? originalTrackData, [MaybeNullWhen(false)] out LavalinkTrack track)
         {
+            try
+            {
+                track = Deserialize(data, originalTrackData);
+                return true;
+            }
+            catch
+            {
+                track = null;
+                return false;
+            }
+        }
+
+        public static LavalinkTrack Deserialize(byte[] data, string? originalTrackData = null)
+        {
+            originalTrackData ??= Utf8ToUtf16(data);
+            uint header = BinaryPrimitives.ReadUInt32BigEndian(data);
+            uint size = header & 0x3FFFFFFF;
+
+            // Legacy encoded track!!
+            if (size == data.Length - 4)
+            {
+                if (DeserializeLegacy(originalTrackData, data, out var result))
+                    return result;
+            }
+
             using MemoryStream memStream = new(data);
             using BinaryReader reader = new(memStream);
             Dictionary<string, JsonElement> additionalInformationBuilder = new();
@@ -97,87 +121,14 @@ namespace Lavalink4NET.Tracks
                 ArtworkUri = artworkUri,
                 Isrc = isrc,
                 AdditionalInformation = additionalInformationBuilder.ToImmutableDictionary(),
-                TrackData = EncodeDataToUtf16(data)
+                TrackData = originalTrackData
             };
         }
 
-        // These LEGACY regions are a temporary measure in place while I work on re-writing the serialization system.
-        // The plan is to automatically detect legacy encoding formats and implement these methods within the new decoding system.
-        // ... but I need to actually write the new decoding system first.
-        //
-        // - Nycro, Oct. 7, 2024
-
-        #region LEGACY PARSING
-
-        public static LavalinkTrack ParseLegacy(string s, IFormatProvider? provider)
-        {
-            return ParseLegacy(s.AsSpan(), provider);
-        }
-
-        public static LavalinkTrack ParseLegacy(ReadOnlySpan<char> s, IFormatProvider? provider)
-        {
-            if (!TryParseLegacy(s, provider, out var result))
-            {
-                throw new ArgumentException("Invalid track.", nameof(s));
-            }
-
-            return result;
-        }
-
-        public static bool TryParseLegacy([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out LavalinkTrack result)
-        {
-            return TryParseLegacy(s is null ? default : s.AsSpan(), provider, out result);
-        }
-
-        public static bool TryParseLegacy(ReadOnlySpan<char> s, IFormatProvider? provider, [MaybeNullWhen(false)] out LavalinkTrack result)
-        {
-            var pool = ArrayPool<byte>.Shared.Rent(s.Length);
-
-            try
-            {
-                var operationStatus = Utf8.FromUtf16(
-                    source: s,
-                    destination: pool,
-                    charsRead: out _,
-                    bytesWritten: out var utf8BytesWritten);
-
-                if (operationStatus is not OperationStatus.Done)
-                {
-                    Debug.Assert(operationStatus is not OperationStatus.DestinationTooSmall);
-
-                    result = null;
-                    return false;
-                }
-
-                operationStatus = Base64.DecodeFromUtf8InPlace(
-                    buffer: pool.AsSpan(0, utf8BytesWritten),
-                    bytesWritten: out var decodedBytesWritten);
-
-                if (operationStatus is not OperationStatus.Done)
-                {
-                    Debug.Assert(operationStatus is not OperationStatus.DestinationTooSmall);
-
-                    result = null;
-                    return false;
-                }
-
-                return TryParseLegacy(s, pool.AsSpan(0, decodedBytesWritten), out result);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(pool);
-            }
-        }
-
-        internal static bool TryParseLegacy(ReadOnlySpan<char> originalTrackData, ReadOnlySpan<byte> buffer, [MaybeNullWhen(false)] out LavalinkTrack result)
-        {
-            var trackDecoder = new LavalinkTrackDecoder(buffer);
-            return TryParseLegacy(originalTrackData, ref trackDecoder, out result);
-        }
-
-        internal static bool TryParseLegacy(ReadOnlySpan<char> originalTrackData, ref LavalinkTrackDecoder trackDecoder, [MaybeNullWhen(false)] out LavalinkTrack result)
+        private static bool DeserializeLegacy(ReadOnlySpan<char> originalTrackData, ReadOnlySpan<byte> buffer, [MaybeNullWhen(false)] out LavalinkTrack result)
         {
             result = null;
+            var trackDecoder = new LegacyLavalinkTrackDecoder(buffer);
 
             if (!trackDecoder.TryReadHeader(out var version) ||
                 !trackDecoder.TryReadString(out var title) ||
@@ -296,7 +247,7 @@ namespace Lavalink4NET.Tracks
             return true;
         }
 
-        internal ref struct LavalinkTrackDecoder(ReadOnlySpan<byte> buffer)
+        internal ref struct LegacyLavalinkTrackDecoder(ReadOnlySpan<byte> buffer)
         {
             public ReadOnlySpan<byte> Buffer { get; set; } = buffer;
 
@@ -514,399 +465,5 @@ namespace Lavalink4NET.Tracks
                 return buffer[..charactersWritten].ToString();
             }
         }
-
-        #endregion
-
-        #region LEGACY FORMATTING
-
-        public string ToStringLegacy()
-        {
-            return ToStringLegacy(version: null, format: null, formatProvider: null);
-        }
-
-        public string ToStringLegacy(string? format, IFormatProvider? formatProvider)
-        {
-            return ToStringLegacy(version: null, format: format, formatProvider: formatProvider);
-        }
-
-        public string ToStringLegacy(int? version)
-        {
-            return ToStringLegacy(version: version, format: null, formatProvider: null);
-        }
-
-        public string ToStringLegacy(int? version, string? format, IFormatProvider? formatProvider)
-        {
-            // The ToString method is culture-neutral and format-neutral
-            if (TrackData is not null && version is null)
-            {
-                return TrackData;
-            }
-
-            Span<char> buffer = stackalloc char[256];
-
-            int charsWritten;
-            while (!TryFormatLegacy(buffer, out charsWritten, version, format ?? default, formatProvider))
-            {
-                buffer = GC.AllocateUninitializedArray<char>(buffer.Length * 2);
-            }
-
-            var trackData = new string(buffer[..charsWritten]);
-
-            if (version is null)
-            {
-                TrackData = trackData;
-            }
-
-            return trackData;
-        }
-
-        public bool TryFormatLegacy(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
-        {
-            return TryFormatLegacy(destination, out charsWritten, version: null, format, provider);
-        }
-
-#pragma warning disable IDE0060
-        public bool TryFormatLegacy(Span<char> destination, out int charsWritten, int? version, ReadOnlySpan<char> format, IFormatProvider? provider)
-#pragma warning restore IDE0060
-        {
-            var buffer = ArrayPool<byte>.Shared.Rent(destination.Length);
-
-            try
-            {
-                var result = TryEncodeLegacy(buffer, version, out var bytesWritten);
-
-                if (!result)
-                {
-                    charsWritten = default;
-                    return false;
-                }
-
-                var operationStatus = Base64.EncodeToUtf8InPlace(
-                    buffer: buffer,
-                    dataLength: bytesWritten,
-                    bytesWritten: out var base64BytesWritten);
-
-                if (operationStatus is not OperationStatus.Done)
-                {
-                    if (operationStatus is OperationStatus.DestinationTooSmall)
-                    {
-                        charsWritten = default;
-                        return false;
-                    }
-
-                    throw new InvalidOperationException("Error while encoding to Base64.");
-                }
-
-                operationStatus = Utf8.ToUtf16(
-                    source: buffer.AsSpan(0, base64BytesWritten),
-                    destination: destination,
-                    bytesRead: out _,
-                    charsWritten: out charsWritten);
-
-                if (operationStatus is not OperationStatus.Done)
-                {
-                    if (operationStatus is OperationStatus.DestinationTooSmall)
-                    {
-                        charsWritten = default;
-                        return false;
-                    }
-
-                    throw new InvalidOperationException("Error while encoding to UTF-8.");
-                }
-
-                return true;
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer);
-            }
-        }
-
-        internal bool TryEncodeLegacy(Span<byte> buffer, int? version, out int bytesWritten)
-        {
-            var versionValue = version ?? 3;
-
-            if (versionValue is not 2 and not 3)
-            {
-                throw new ArgumentOutOfRangeException(nameof(version));
-            }
-
-            if (SourceName is null)
-            {
-                throw new InvalidOperationException("Unknown source.");
-            }
-
-            var isProbingAudioTrack = IsProbingTrack(SourceName);
-
-            if (isProbingAudioTrack && ProbeInfo is null)
-            {
-                throw new InvalidOperationException("For the HTTP and local source audio manager, a probe info must be given.");
-            }
-
-            if (buffer.Length < 5)
-            {
-                bytesWritten = 0;
-                return false;
-            }
-
-            // Reserve 5 bytes for the header
-            var headerBuffer = buffer[..5];
-            buffer = buffer[5..];
-            bytesWritten = 5;
-
-            // Write title and author
-            if (!TryEncodeStringLegacy(ref buffer, Title, ref bytesWritten) ||
-                !TryEncodeStringLegacy(ref buffer, Author, ref bytesWritten))
-            {
-                return false;
-            }
-
-            // Write track duration
-            if (buffer.Length < 8)
-            {
-                return false;
-            }
-
-            var duration = Duration == TimeSpan.MaxValue
-                ? long.MaxValue
-                : (long)Math.Round(Duration.TotalMilliseconds);
-
-            BinaryPrimitives.WriteInt64BigEndian(
-                destination: buffer[..8],
-                value: duration);
-
-            buffer = buffer[8..];
-            bytesWritten += 8;
-
-            // Write track identifier
-            if (!TryEncodeStringLegacy(ref buffer, Identifier, ref bytesWritten))
-            {
-                return false;
-            }
-
-            // Write stream flag
-            if (buffer.Length < 1)
-            {
-                return false;
-            }
-
-            buffer[0] = (byte)(IsLiveStream ? 1 : 0);
-
-            bytesWritten++;
-            buffer = buffer[1..];
-
-            var rawUri = Uri is null ? string.Empty : Uri.ToString();
-
-            if (!TryEncodeOptionalStringLegacy(ref buffer, rawUri, ref bytesWritten))
-            {
-                return false;
-            }
-
-            if (versionValue >= 3)
-            {
-                var rawArtworkUri = ArtworkUri is null ? string.Empty : ArtworkUri.ToString();
-
-                if (!TryEncodeOptionalStringLegacy(ref buffer, rawArtworkUri, ref bytesWritten) ||
-                    !TryEncodeOptionalStringLegacy(ref buffer, Isrc, ref bytesWritten))
-                {
-                    return false;
-                }
-            }
-
-            // Write source name
-            if (!TryEncodeStringLegacy(ref buffer, SourceName, ref bytesWritten))
-            {
-                return false;
-            }
-
-            // Write probe information
-            if (isProbingAudioTrack && !TryEncodeStringLegacy(ref buffer, ProbeInfo, ref bytesWritten))
-            {
-                return false;
-            }
-
-            if (IsExtendedTrack(SourceName))
-            {
-                bool TryEncodeOptionalJsonString(ref Span<byte> buffer, string propertyName, ref int bytesWritten)
-                {
-                    var value = AdditionalInformation.TryGetValue(propertyName, out var jsonElement)
-                        ? jsonElement.GetString()!
-                        : string.Empty;
-
-                    return TryEncodeOptionalStringLegacy(ref buffer, value, ref bytesWritten);
-                }
-
-                if (!TryEncodeOptionalJsonString(ref buffer, "albumName", ref bytesWritten) ||
-                    !TryEncodeOptionalJsonString(ref buffer, "albumUrl", ref bytesWritten) ||
-                    !TryEncodeOptionalJsonString(ref buffer, "artistUrl", ref bytesWritten) ||
-                    !TryEncodeOptionalJsonString(ref buffer, "artistArtworkUrl", ref bytesWritten) ||
-                    !TryEncodeOptionalJsonString(ref buffer, "previewUrl", ref bytesWritten))
-                {
-                    return false;
-                }
-
-                var isPreview = AdditionalInformation.TryGetValue("isPreview", out var isPreviewElement) && isPreviewElement.GetBoolean();
-
-                if (buffer.Length < 1)
-                {
-                    return false;
-                }
-
-                buffer[0] = (byte)(isPreview ? 1 : 0);
-                bytesWritten++;
-                buffer = buffer[1..];
-            }
-
-            // Write track start position
-            if (buffer.Length < 8)
-            {
-                return false;
-            }
-
-            BinaryPrimitives.WriteInt64BigEndian(
-                destination: buffer[..8],
-                value: (long)Math.Round(StartPosition?.TotalMilliseconds ?? 0));
-
-            // buffer = buffer[8..];
-            bytesWritten += 8;
-
-            var payloadLength = bytesWritten - 4;
-            EncodeHeaderLegacy(headerBuffer, payloadLength, (byte)versionValue);
-
-            return true;
-        }
-
-        private static void EncodeHeaderLegacy(Span<byte> headerBuffer, int payloadLength, byte version)
-        {
-            // Set "has version" in header
-            var header = 0b01000000000000000000000000000000 | payloadLength;
-            BinaryPrimitives.WriteInt32BigEndian(headerBuffer, header);
-
-            // version
-            headerBuffer[4] = version;
-        }
-
-        private static bool TryEncodeStringLegacy(ref Span<byte> span, ReadOnlySpan<char> value, ref int bytesWritten)
-        {
-            if (span.Length < 2)
-            {
-                return false;
-            }
-
-            var lengthBuffer = span[..2];
-            span = span[2..];
-
-            var previousBytesWritten = bytesWritten;
-
-            if (!TryWriteModifiedUtf8Legacy(ref span, value, ref bytesWritten))
-            {
-                return false;
-            }
-
-            var utf8BytesWritten = bytesWritten - previousBytesWritten;
-
-            BinaryPrimitives.WriteUInt16BigEndian(lengthBuffer, (ushort)utf8BytesWritten);
-
-            bytesWritten += 2;
-
-            return true;
-        }
-
-        private static bool TryEncodeOptionalStringLegacy(ref Span<byte> span, ReadOnlySpan<char> value, ref int bytesWritten)
-        {
-            if (span.Length < 1)
-            {
-                return false;
-            }
-
-            var present = !value.IsWhiteSpace();
-
-            span[0] = (byte)(present ? 1 : 0);
-            span = span[1..];
-            bytesWritten++;
-
-            if (!present)
-            {
-                return true;
-            }
-
-            if (!TryEncodeStringLegacy(ref span, value, ref bytesWritten))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private static bool TryWriteModifiedUtf8Legacy(ref Span<byte> span, ReadOnlySpan<char> value, ref int bytesWritten)
-        {
-            // Ported from https://android.googlesource.com/platform/prebuilts/fullsdk/sources/android-29/+/refs/heads/androidx-wear-release/java/io/DataOutputStream.java
-
-            int index;
-            for (index = 0; index < value.Length; index++)
-            {
-                var character = value[index];
-
-                if (character is not (>= (char)0x0001 and <= (char)0x007F))
-                {
-                    break;
-                }
-
-                if (span.IsEmpty)
-                {
-                    return false;
-                }
-
-                span[0] = (byte)character;
-                bytesWritten++;
-                span = span[1..];
-            }
-
-            for (; index < value.Length; index++)
-            {
-                var character = value[index];
-
-                if (character is >= (char)0x0001 and <= (char)0x007F)
-                {
-                    if (span.IsEmpty)
-                    {
-                        return false;
-                    }
-
-                    span[0] = (byte)character;
-                    bytesWritten++;
-                    span = span[1..];
-                }
-                else if (character > 0x07FF)
-                {
-                    if (span.Length < 3)
-                    {
-                        return false;
-                    }
-
-                    span[0] = (byte)(0xE0 | ((character >> 12) & 0x0F));
-                    span[1] = (byte)(0x80 | ((character >> 6) & 0x3F));
-                    span[2] = (byte)(0x80 | ((character >> 0) & 0x3F));
-                    bytesWritten += 3;
-                    span = span[3..];
-                }
-                else
-                {
-                    if (span.Length < 2)
-                    {
-                        return false;
-                    }
-
-                    span[0] = (byte)(0xC0 | ((character >> 6) & 0x1F));
-                    span[1] = (byte)(0x80 | ((character >> 0) & 0x3F));
-                    bytesWritten += 2;
-                    span = span[2..];
-                }
-            }
-
-            return true;
-        }
-
-        #endregion
     }
 }
