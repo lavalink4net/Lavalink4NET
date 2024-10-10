@@ -17,6 +17,17 @@ namespace Lavalink4NET.Tracks
             if (version < 4)
                 return SerializeLegacy(version.Value);
 
+            // The serialization structure that follows is largely the same as legacy tracks.
+            //
+            // However, among a few other slight improvements (like removing the need to repeatedly
+            // re-allocate buffers to ensure a container is large enough), the C# BinaryReader/BinaryWriter
+            // use little-endian format, whereas the original structure uses big-endian - so they are incompatible.
+            //
+            // While there were 0 problems with the original system, and it worked perfectly fine, the positive benefits that come
+            // with switching to C# binary encoding well outweigh any that would come from staying.
+            // It is easier to expand, standardized, requires less extensions, natively integrated, optimized, and most of all, much cleaner.
+            // It additionally allows for dynamic buffer sizing, as it is capable of writing directly to a MemoryStream.
+
             if (SourceName is null)
             {
                 throw new InvalidOperationException("Unknown source.");

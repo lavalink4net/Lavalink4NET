@@ -32,15 +32,15 @@ namespace Lavalink4NET.Tracks
             uint size = header & 0x3FFFFFFF;
 
             // Legacy encoded track!!
-            if (size == data.Length - 4)
-            {
-                if (DeserializeLegacy(originalTrackData, data, out var result))
-                    return result;
-            }
+            if (size == data.Length - 4 && DeserializeLegacy(originalTrackData, data, out var result))
+                return result;
 
             using MemoryStream memStream = new(data);
             using BinaryReader reader = new(memStream);
             Dictionary<string, JsonElement> additionalInformationBuilder = new();
+
+            // The following fields are encoded in order using
+            // a BinaryWriter for writing and BinaryReader for  reading.
 
             byte version = reader.ReadByte();
             string title = reader.ReadString();
@@ -79,10 +79,14 @@ namespace Lavalink4NET.Tracks
                 ReadJson("artistArtworkUrl");
                 ReadJson("previewUrl");
 
+                // "isPreview" is special, as it is encoded as a single byte,
+                // not as a string.
                 KeyValuePair<string, JsonNode?> isPreview = new("isPreview", reader.ReadBoolean());
                 json.Add(isPreview);
                 additionalInformationBuilder.Add(isPreview.Key, new());
 
+                // Writing the json object and then reading it
+                // allows for the transition to JsonElement based properties.
                 json.WriteTo(jsonWriter);
                 var jsonReader = new Utf8JsonReader(jsonStream.ToArray());
                 var jsonDocument = JsonElement.ParseValue(ref jsonReader);
@@ -96,12 +100,12 @@ namespace Lavalink4NET.Tracks
             long startPositionMs = reader.ReadInt64();
 
             TimeSpan duration = durationMs >= TimeSpan.MaxValue.TotalMilliseconds
-                    ? TimeSpan.MaxValue
-                    : TimeSpan.FromMilliseconds(durationMs);
+                ? TimeSpan.MaxValue
+                : TimeSpan.FromMilliseconds(durationMs);
 
             TimeSpan? startPosition = startPositionMs is 0
-                    ? default(TimeSpan?)
-                    : TimeSpan.FromMilliseconds(startPositionMs);
+                ? default(TimeSpan?)
+                : TimeSpan.FromMilliseconds(startPositionMs);
 
             Uri.TryCreate(rawUri, UriKind.Absolute, out var uri);
             Uri.TryCreate(rawArtworkUri, UriKind.Absolute, out var artworkUri);
