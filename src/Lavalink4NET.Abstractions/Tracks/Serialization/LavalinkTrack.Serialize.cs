@@ -50,7 +50,7 @@ namespace Lavalink4NET.Tracks
                 ? long.MaxValue
                 : (long)Math.Round(Duration.TotalMilliseconds);
 
-            writer.Write(version.Value);
+            writer.Write((byte)version.Value);
             writer.Write(Title);
             writer.Write(Author);
             writer.Write(duration);

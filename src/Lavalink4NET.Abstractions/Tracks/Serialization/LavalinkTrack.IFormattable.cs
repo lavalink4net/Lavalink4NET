@@ -11,7 +11,13 @@ public partial record class LavalinkTrack : ISpanFormattable
 
     public override string ToString() => ToString(version: null);
 
-    public string ToString(int? version) => Utf8ToUtf16(Serialize(version));
+    public string ToString(int? version)
+    {
+        if (TrackData is null || version is not null)
+            TrackData = Utf8ToUtf16(Serialize(version));
+
+        return TrackData;
+    }
 
     public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
     {
