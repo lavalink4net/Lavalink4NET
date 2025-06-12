@@ -12,7 +12,7 @@
     <Version>1.0.4</Version>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02354" />
+    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02517" />
     <ProjectReference Include="../Lavalink4NET/Lavalink4NET.csproj" />
   </ItemGroup>
   <Import Project="../Lavalink4NET.targets" />

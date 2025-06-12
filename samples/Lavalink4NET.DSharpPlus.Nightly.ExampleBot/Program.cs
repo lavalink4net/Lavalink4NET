@@ -15,7 +15,7 @@ builder.Services.AddHostedService<ApplicationHost>();
 
 // DSharpPlus
 builder.Services.AddDiscordClient("Your token here", DiscordIntents.AllUnprivileged);
-builder.Services.AddCommandsExtension(extension => extension.AddCommands(typeof(MusicCommands).Assembly));
+builder.Services.AddCommandsExtension((IServiceProvider sp, CommandsExtension c) => c.AddCommands(typeof(MusicCommands).Assembly));
 
 
 // Lavalink4NET

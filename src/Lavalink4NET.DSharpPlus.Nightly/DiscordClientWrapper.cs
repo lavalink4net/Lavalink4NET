@@ -179,18 +179,18 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
 
         // create voice state
         var voiceState = new VoiceState(
-            VoiceChannelId: voiceStateUpdateEventArgs.After?.Channel?.Id,
+            VoiceChannelId: voiceStateUpdateEventArgs.After?.ChannelId,
             SessionId: sessionId);
 
         var oldVoiceState = new VoiceState(
-            VoiceChannelId: voiceStateUpdateEventArgs.Before?.Channel?.Id,
+            VoiceChannelId: voiceStateUpdateEventArgs.Before?.ChannelId,
             SessionId: sessionId);
 
         // invoke event
         var eventArgs = new Lavalink4NET.VoiceStateUpdatedEventArgs(
-            guildId: voiceStateUpdateEventArgs.Guild.Id,
-            userId: voiceStateUpdateEventArgs.User.Id,
-            isCurrentUser: voiceStateUpdateEventArgs.User.Id == discordClient.CurrentUser.Id,
+            guildId: voiceStateUpdateEventArgs.GuildId ?? 0,
+            userId: voiceStateUpdateEventArgs.UserId,
+            isCurrentUser: voiceStateUpdateEventArgs.UserId == discordClient.CurrentUser.Id,
             oldVoiceState: oldVoiceState,
             voiceState: voiceState);
 
