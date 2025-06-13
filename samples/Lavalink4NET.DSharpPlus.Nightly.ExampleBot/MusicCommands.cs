@@ -93,7 +93,7 @@ public class MusicCommands
         var playerOptions = new QueuedLavalinkPlayerOptions { HistoryCapacity = 10000 };
 
         var result = await _audioService.Players
-            .RetrieveAsync(commandContext.Guild!.Id, commandContext.Member?.VoiceState.ChannelId ?? null, playerFactory: PlayerFactory.Queued, Options.Create(playerOptions), retrieveOptions)
+            .RetrieveAsync(commandContext.Guild!.Id, commandContext.Member?.VoiceState.ChannelId, playerFactory: PlayerFactory.Queued, Options.Create(playerOptions), retrieveOptions)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
