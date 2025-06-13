@@ -188,7 +188,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
 
         // invoke event
         var eventArgs = new Lavalink4NET.VoiceStateUpdatedEventArgs(
-            guildId: voiceStateUpdateEventArgs.GuildId ?? 0,
+            guildId: voiceStateUpdateEventArgs.GuildId!.Value,
             userId: voiceStateUpdateEventArgs.UserId,
             isCurrentUser: voiceStateUpdateEventArgs.UserId == discordClient.CurrentUser.Id,
             oldVoiceState: oldVoiceState,
