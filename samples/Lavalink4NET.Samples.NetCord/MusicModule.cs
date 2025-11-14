@@ -8,7 +8,7 @@ using Lavalink4NET.Players;
 using Lavalink4NET.Rest.Entities.Tracks;
 using NetCord.Services.ApplicationCommands;
 
-public class MusicModule(IAudioService audioService) : ApplicationCommandModule<SlashCommandContext>
+public class MusicModule(IAudioService audioService) : ApplicationCommandModule<ApplicationCommandContext>
 {
     [SlashCommand("play", "Plays a track!")]
     public async Task PlayAsync([SlashCommandParameter(Description = "The query to search for")] string query)
