@@ -13,7 +13,7 @@ public class MusicModule(IAudioService audioService) : ApplicationCommandModule<
     [SlashCommand("play", "Plays a track!")]
     public async Task PlayAsync([SlashCommandParameter(Description = "The query to search for")] string query)
     {
-        await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredMessage());
+        await RespondAsync(InteractionCallback.DeferredMessage());
 
         var retrieveOptions = new PlayerRetrieveOptions(ChannelBehavior: PlayerChannelBehavior.Join);
 
@@ -23,7 +23,7 @@ public class MusicModule(IAudioService audioService) : ApplicationCommandModule<
         if (!result.IsSuccess)
         {
             var errorMessage = GetErrorMessage(result.Status);
-            await Context.Interaction.SendFollowupMessageAsync(new InteractionMessageProperties { Content = errorMessage });
+            await FollowupAsync(errorMessage);
             return;
         }
 
@@ -34,13 +34,13 @@ public class MusicModule(IAudioService audioService) : ApplicationCommandModule<
 
         if (track is null)
         {
-            await Context.Interaction.SendFollowupMessageAsync(new InteractionMessageProperties { Content = "No tracks found." });
+            await FollowupAsync("No tracks found.");
             return;
         }
 
         await player.PlayAsync(track);
 
-        await Context.Interaction.SendFollowupMessageAsync(new InteractionMessageProperties { Content = $"Now playing: {track.Title}" });
+        await FollowupAsync($"Now playing: {track.Title}");
     }
 
     private static string GetErrorMessage(PlayerRetrieveStatus retrieveStatus) => retrieveStatus switch
