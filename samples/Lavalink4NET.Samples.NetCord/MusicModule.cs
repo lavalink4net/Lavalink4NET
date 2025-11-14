@@ -1,7 +1,6 @@
-﻿using NetCord.Rest;
-
 namespace ExampleBot;
 
+﻿using NetCord.Rest;
 using Lavalink4NET;
 using Lavalink4NET.NetCord;
 using Lavalink4NET.Players;
