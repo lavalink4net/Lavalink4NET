@@ -12,7 +12,6 @@ var builder = Host.CreateDefaultBuilder(args)
     .UseApplicationCommands<SlashCommandInteraction, SlashCommandContext>();
 
 var host = builder.Build()
-    .AddModules(typeof(Program).Assembly)
-    .UseGatewayEventHandlers();
+    .AddModules(typeof(Program).Assembly);
 
 host.Run();

@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <TargetFrameworks>net8.0</TargetFrameworks>
+        <TargetFrameworks>net9.0</TargetFrameworks>
         <LangVersion>latest</LangVersion>
         
         <!-- Package Description -->
@@ -11,8 +11,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="NetCord" Version="1.0.0-alpha.338" />
-        <PackageReference Include="NetCord.Services" Version="1.0.0-alpha.338" />
+        <PackageReference Include="NetCord" Version="1.0.0-alpha.448" />
+        <PackageReference Include="NetCord.Services" Version="1.0.0-alpha.448" />
     </ItemGroup>
 
     <ItemGroup>
