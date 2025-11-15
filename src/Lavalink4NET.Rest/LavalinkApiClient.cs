@@ -445,6 +445,7 @@ internal static class StrictSearchHelper
         StrictSearchBehavior.Implicit => ProcessImplicit(identifier, searchMode),
         StrictSearchBehavior.Explicit => ProcessExplicit(identifier, searchMode),
         StrictSearchBehavior.Passthrough => ProcessPassthrough(identifier, searchMode),
+        _ => throw new NotImplementedException()
     };
 
     private static string ProcessThrow(string identifier, TrackSearchMode searchMode)

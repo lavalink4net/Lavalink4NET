@@ -73,7 +73,7 @@ public sealed class LavalinkTrackTests
         {
             for (var size = 0; size < data.Length - 1; size++)
             {
-                var result = LavalinkTrack.TryParse(base64, data.AsSpan(0, size), out _);
+                var result = LavalinkTrack.TryDeserialize(data.AsSpan(0, size).ToArray(), base64, out _);
                 Assert.False(result);
             }
         });
@@ -100,7 +100,7 @@ public sealed class LavalinkTrackTests
         var track = trackInfo.ToString();
 
         // decode back
-        var actualTrackInfo = LavalinkTrack.Parse(track, provider: null);
+        var actualTrackInfo = LavalinkTrack.Parse(track);
 
         Assert.Equal(trackInfo.Author, actualTrackInfo.Author);
         Assert.Equal(trackInfo.Duration, actualTrackInfo.Duration);
@@ -136,7 +136,7 @@ public sealed class LavalinkTrackTests
         {
             for (var size = 0; size < buffer.Length; size++)
             {
-                var result = trackInfo.TryEncode(
+                var result = trackInfo.TryEncodeLegacy(
                     buffer: buffer.AsSpan()[..size],
                     version: 3,
                     bytesWritten: out _);
@@ -176,7 +176,7 @@ public sealed class LavalinkTrackTests
         {
             for (var size = 0; size < buffer.Length; size++)
             {
-                var result = trackInfo.TryEncode(
+                var result = trackInfo.TryEncodeLegacy(
                     buffer: buffer.AsSpan()[..size],
                     version: 2,
                     bytesWritten: out _);
@@ -238,7 +238,7 @@ public sealed class LavalinkTrackTests
         };
 
         // Act
-        var result = trackInfo.ToString(version);
+        var result = trackInfo.ToString(version: version);
 
         // Assert
         Assert.NotEqual("cached-id", result);
@@ -268,7 +268,7 @@ public sealed class LavalinkTrackTests
         };
 
         // Act
-        var result = trackInfo.ToString(format: null, formatProvider: null);
+        var result = trackInfo.ToString();
 
         // Assert
         Assert.NotNull(result);
@@ -282,8 +282,8 @@ public sealed class LavalinkTrackTests
         // Arrange
         // Parsing from a base64 string will cache it internally
         var originalTrackInfo = LavalinkTrack.Parse(
-            s: "QAAAjAIAJFZhbmNlIEpveSAtICdSaXB0aWRlJyBPZmZpY2lhbCBWaWRlbwAObXVzaHJvb212aWRlb3MAAAAAAAMgyAALdUpfMUhNQUdiNGsAAQAraHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj11Sl8xSE1BR2I0awAHeW91dHViZQAAAAAAAAAA",
-            provider: null);
+            "QAAAjAIAJFZhbmNlIEpveSAtICdSaXB0aWRlJyBPZmZpY2lhbCBWaWRlbwAObXVzaHJvb212aWRlb3MAAAAAAAMgyAALdUpfMUhNQUdiNGsAAQAraHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj11Sl8xSE1BR2I0awAHeW91dHViZQAAAAAAAAAA"
+        );
 
         // Mutate track
         var mutatedTrack = originalTrackInfo with { StartPosition = TimeSpan.FromSeconds(30), };
@@ -324,7 +324,7 @@ public sealed class LavalinkTrackTests
         track.TrackData = null; // avoid caching
 
         // Act
-        var actualIdentifier = track.ToString(version: null);
+        var actualIdentifier = track.ToString();
 
         // Assert
         Assert.Equal(model.Data, actualIdentifier);
@@ -356,7 +356,7 @@ public sealed class LavalinkTrackTests
             """)!;
 
         // Act
-        var parsedTrack = LavalinkTrack.Parse(model.Data, provider: null);
+        var parsedTrack = LavalinkTrack.Parse(model.Data);
 
         // Assert
         Assert.Equal(model.Information.Identifier, parsedTrack.Identifier);
@@ -397,7 +397,7 @@ public sealed class LavalinkTrackTests
             """)!;
 
         // Act
-        var parsedTrack = LavalinkTrack.Parse(model.Data, provider: null);
+        var parsedTrack = LavalinkTrack.Parse(model.Data);
         var decodedTrack = LavalinkApiClient.CreateTrack(model);
 
         // Assert
@@ -430,7 +430,7 @@ public sealed class LavalinkTrackTests
             """)!;
 
         // Act
-        var parsedTrack = LavalinkTrack.Parse(model.Data, provider: null).GetHashCode();
+        var parsedTrack = LavalinkTrack.Parse(model.Data).GetHashCode();
         var decodedTrack = LavalinkApiClient.CreateTrack(model).GetHashCode();
 
         // Assert
