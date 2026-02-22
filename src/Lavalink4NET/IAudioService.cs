@@ -30,6 +30,14 @@ public interface IAudioService : IAsyncDisposable
 
     event AsyncEventHandler<ConnectionClosedEventArgs>? ConnectionClosed;
 
+    /// <summary>
+    ///     Occurs when a connection to a Lavalink node is established and ready.
+    /// </summary>
+    /// <remarks>
+    ///     This event is raised both on initial connection and on reconnection to a Lavalink node.
+    /// </remarks>
+    event AsyncEventHandler<ConnectionReadyEventArgs>? ConnectionReady;
+
     IDiscordClientWrapper DiscordClient { get; }
 
     IIntegrationManager Integrations { get; }

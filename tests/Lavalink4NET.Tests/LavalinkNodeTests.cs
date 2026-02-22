@@ -322,6 +322,83 @@ public sealed class LavalinkNodeTests
     }
 
     [Fact]
+    public async Task TestReadyPayloadDispatchesConnectionReadyEventAsync()
+    {
+        // Arrange
+        using var socketFactory = new LavalinkSocketFactory();
+
+        var nodeListener = new Mock<ILavalinkNodeListener>();
+
+        var serviceContext = new LavalinkNodeServiceContext(
+            ClientWrapper: Mock.Of<IDiscordClientWrapper>(),
+            LavalinkSocketFactory: socketFactory,
+            IntegrationManager: new IntegrationManager(),
+            PlayerManager: Mock.Of<IPlayerManager>(),
+            NodeListener: nodeListener.Object);
+
+        var node = new LavalinkNode(
+            serviceContext,
+            apiClient: Mock.Of<ILavalinkApiClient>(),
+            options: Options.Create(new NodeOptions { }),
+            apiEndpoints: new LavalinkApiEndpoints(new Uri("http://localhost/")),
+            logger: NullLogger<LavalinkNode>.Instance);
+
+        _ = node.RunAsync(new ClientInformation("Client", 0, 1)).AsTask();
+        await using var __ = node.ConfigureAwait(false);
+
+        // Act
+        socketFactory.Socket.Send(new ReadyPayload(false, "abc"));
+        socketFactory.Socket.Complete();
+
+        await Task.Delay(100);
+
+        // Assert
+        nodeListener.Verify(
+            expression: listener => listener.OnConnectionReadyAsync(It.IsAny<CancellationToken>()),
+            times: Times.Once());
+    }
+
+    [Fact]
+    public async Task TestReadyPayloadDispatchesConnectionReadyOnReconnectAsync()
+    {
+        // Arrange
+        using var socketFactory = new LavalinkSocketFactory();
+
+        var nodeListener = new Mock<ILavalinkNodeListener>();
+
+        var serviceContext = new LavalinkNodeServiceContext(
+            ClientWrapper: Mock.Of<IDiscordClientWrapper>(),
+            LavalinkSocketFactory: socketFactory,
+            IntegrationManager: new IntegrationManager(),
+            PlayerManager: Mock.Of<IPlayerManager>(),
+            NodeListener: nodeListener.Object);
+
+        var node = new LavalinkNode(
+            serviceContext,
+            apiClient: Mock.Of<ILavalinkApiClient>(),
+            options: Options.Create(new NodeOptions { }),
+            apiEndpoints: new LavalinkApiEndpoints(new Uri("http://localhost/")),
+            logger: NullLogger<LavalinkNode>.Instance);
+
+        _ = node.RunAsync(new ClientInformation("Client", 0, 1)).AsTask();
+        await using var __ = node.ConfigureAwait(false);
+
+        // Act - Send two ReadyPayloads to simulate initial connection + reconnection
+        socketFactory.Socket.Send(new ReadyPayload(false, "session-1"));
+        await Task.Delay(100);
+
+        socketFactory.Socket.Send(new ReadyPayload(false, "session-2"));
+        await Task.Delay(100);
+
+        socketFactory.Socket.Complete();
+
+        // Assert - Should be called twice (initial + reconnect)
+        nodeListener.Verify(
+            expression: listener => listener.OnConnectionReadyAsync(It.IsAny<CancellationToken>()),
+            times: Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task TestTrackExceptionPayloadDispatchesTrackExceptionEventAsync()
     {
         // Arrange
