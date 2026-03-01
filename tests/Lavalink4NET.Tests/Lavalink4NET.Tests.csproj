@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-    <PropertyGroup>
-    </PropertyGroup>
+    <PropertyGroup />
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Lavalink4NET.DiscordNet\Lavalink4NET.DiscordNet.csproj" />
