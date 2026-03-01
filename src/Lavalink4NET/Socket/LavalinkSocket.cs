@@ -31,6 +31,8 @@ internal sealed class LavalinkSocket : ILavalinkSocket
 
     public event AsyncEventHandler<ConnectionClosedEventArgs>? ConnectionClosed;
 
+    public event AsyncEventHandler<ConnectionStartedEventArgs>? ConnectionStarted;
+
     public LavalinkSocket(
         IHttpMessageHandlerFactory httpMessageHandlerFactory,
         IReconnectStrategy reconnectStrategy,
@@ -129,6 +131,7 @@ internal sealed class LavalinkSocket : ILavalinkSocket
                     attempt = 0;
 
                     _logger.ConnectionEstablished(Label);
+                    await InvokeConnectionStartedAsync(new ConnectionStartedEventArgs(this, _options.Uri));
 
                     return webSocket;
                 }
@@ -284,6 +287,22 @@ internal sealed class LavalinkSocket : ILavalinkSocket
         }
     }
 
+    private async Task InvokeConnectionStartedAsync(ConnectionStartedEventArgs eventArgs)
+    {
+        ArgumentNullException.ThrowIfNull(eventArgs);
+
+        try
+        {
+            await ConnectionStarted
+                .InvokeAsync(this, eventArgs)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            _logger.ErrorConnectionStartedEvent(Label, exception);
+        }
+    }
+
     private void Dispose(bool disposing)
     {
         if (_disposed)
@@ -325,7 +344,10 @@ internal static partial class Logging
 
     [LoggerMessage(6, LogLevel.Warning, "[{Label}] An error occurred while dispatching the ConnectionClosed event.", EventName = nameof(ErrorConnectionClosedEvent))]
     public static partial void ErrorConnectionClosedEvent(this ILogger<LavalinkSocket> logger, string label, Exception exception);
-    
+
     [LoggerMessage(7, LogLevel.Warning, "[{Label}] Failed to connect to the Lavalink node.", EventName = nameof(FailedToConnectFirstTime))]
     public static partial void FailedToConnectFirstTime(this ILogger<LavalinkSocket> logger, string label, Exception exception);
+
+    [LoggerMessage(8, LogLevel.Warning, "[{Label}] An error occurred while dispatching the ConnectionStarted event.", EventName = nameof(ErrorConnectionStartedEvent))]
+    public static partial void ErrorConnectionStartedEvent(this ILogger<LavalinkSocket> logger, string label, Exception exception);
 }

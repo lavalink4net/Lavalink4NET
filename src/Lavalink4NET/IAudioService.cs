@@ -30,6 +30,10 @@ public interface IAudioService : IAsyncDisposable
 
     event AsyncEventHandler<ConnectionClosedEventArgs>? ConnectionClosed;
 
+    event AsyncEventHandler<ConnectionStartedEventArgs>? ConnectionStarted;
+
+    event AsyncEventHandler<ConnectionReadyEventArgs>? ConnectionReady;
+
     IDiscordClientWrapper DiscordClient { get; }
 
     IIntegrationManager Integrations { get; }

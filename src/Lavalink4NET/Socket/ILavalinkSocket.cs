@@ -10,6 +10,8 @@ public interface ILavalinkSocket : IDisposable
 {
     event AsyncEventHandler<ConnectionClosedEventArgs>? ConnectionClosed;
 
+    event AsyncEventHandler<ConnectionStartedEventArgs>? ConnectionStarted;
+
     string Label { get; }
 
     ValueTask<IPayload?> ReceiveAsync(CancellationToken cancellationToken = default);

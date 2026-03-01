@@ -147,6 +147,10 @@ public abstract class AudioServiceBase : IAudioService, ILavalinkNodeListener
 
     public event AsyncEventHandler<ConnectionClosedEventArgs>? ConnectionClosed;
 
+    public event AsyncEventHandler<ConnectionStartedEventArgs>? ConnectionStarted;
+
+    public event AsyncEventHandler<ConnectionReadyEventArgs>? ConnectionReady;
+
     protected virtual ValueTask OnTrackEndedAsync(TrackEndedEventArgs eventArgs, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -159,6 +163,20 @@ public abstract class AudioServiceBase : IAudioService, ILavalinkNodeListener
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(eventArgs);
         return ConnectionClosed.InvokeAsync(this, eventArgs);
+    }
+
+    protected virtual ValueTask OnConnectionStartedAsync(ConnectionStartedEventArgs eventArgs, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        return ConnectionStarted.InvokeAsync(this, eventArgs);
+    }
+
+    protected virtual ValueTask OnConnectionReadyAsync(ConnectionReadyEventArgs eventArgs, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        return ConnectionReady.InvokeAsync(this, eventArgs);
     }
 
     protected virtual ValueTask OnTrackExceptionAsync(TrackExceptionEventArgs eventArgs, CancellationToken cancellationToken = default)
@@ -337,6 +355,22 @@ public abstract class AudioServiceBase : IAudioService, ILavalinkNodeListener
         ArgumentNullException.ThrowIfNull(eventArgs);
 
         return OnConnectionClosedAsync(eventArgs, cancellationToken);
+    }
+
+    ValueTask ILavalinkNodeListener.OnConnectionStartedAsync(ConnectionStartedEventArgs eventArgs, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(eventArgs);
+
+        return OnConnectionStartedAsync(eventArgs, cancellationToken);
+    }
+
+    ValueTask ILavalinkNodeListener.OnConnectionReadyAsync(ConnectionReadyEventArgs eventArgs, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(eventArgs);
+
+        return OnConnectionReadyAsync(eventArgs, cancellationToken);
     }
 }
 
