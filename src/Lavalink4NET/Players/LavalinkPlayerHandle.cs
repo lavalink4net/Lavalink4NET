@@ -144,9 +144,9 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
                 // CreatePlayerAsync can throw if request to lavalink fails
                 // We should handle this to avoid never completed lavalink player handle
                 var player = await CreatePlayerAsync(cancellationToken).ConfigureAwait(false);
-                
+
                 taskCompletionSource.TrySetResult(player);
-                
+
                 Interlocked.Decrement(ref Diagnostics.PendingHandles);
                 Interlocked.Increment(ref Diagnostics.ActivePlayers);
             }
@@ -199,7 +199,8 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
             VoiceState = new VoiceStateProperties(
                 Token: _voiceServer.Value.Token,
                 Endpoint: _voiceServer.Value.Endpoint,
-                SessionId: _voiceState.Value.SessionId!),
+                SessionId: _voiceState.Value.SessionId!,
+                ChannelId: _voiceState.Value.VoiceChannelId?.ToString()),
         };
 
         if (_options.Value.InitialTrack is not null)
@@ -210,7 +211,7 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
             if (initialTrack.Reference.IsPresent)
             {
                 var playableTrack = await initialTrack.Reference.Track.GetPlayableTrackAsync(cancellationToken);
-                playerProperties = playerProperties with { TrackData = playableTrack.ToString()};
+                playerProperties = playerProperties with { TrackData = playableTrack.ToString() };
             }
             else
             {
