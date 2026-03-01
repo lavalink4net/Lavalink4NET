@@ -13,4 +13,7 @@ public sealed record class VoiceStateProperties(
 
     [property: JsonRequired]
     [property: JsonPropertyName("sessionId")]
-    string SessionId);
+    string SessionId,
+
+    [property: JsonPropertyName("channelId")]
+    string? ChannelId);
