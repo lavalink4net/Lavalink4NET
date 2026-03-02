@@ -21,11 +21,11 @@
     "clsx": "^2.1.0",
     "prism-react-renderer": "^2.3.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.1.1",
-    "@tsconfig/docusaurus": "^2.0.2",
+    "@tsconfig/docusaurus": "^2.0.8",
     "typescript": "^5.4.2"
   },
   "browserslist": {

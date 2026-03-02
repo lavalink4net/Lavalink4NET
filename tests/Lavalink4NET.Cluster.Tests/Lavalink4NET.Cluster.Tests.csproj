@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-  </PropertyGroup>
+  <PropertyGroup />
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lavalink4NET.Cluster\Lavalink4NET.Cluster.csproj" />

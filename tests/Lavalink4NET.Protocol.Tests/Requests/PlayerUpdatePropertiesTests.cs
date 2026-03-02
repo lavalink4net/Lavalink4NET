@@ -17,7 +17,8 @@ public sealed class PlayerUpdatePropertiesTests
               "voice": {
                 "token": "...",
                 "endpoint": "...",
-                "sessionId": "..."
+                "sessionId": "...",
+                "channelId": "..."
               }
             }
             """);

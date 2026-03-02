@@ -510,7 +510,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 
         // TODO: restore filters
     }
-    
+
     protected virtual ITrackQueueItem? LookupTrackQueueItem(LavalinkTrack receivedTrack, ITrackQueueItem? currentItem,
         string? overridenTrackIdentifier)
     {
@@ -708,7 +708,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
             VoiceState = new VoiceStateProperties(
                 Token: VoiceServer.Value.Token,
                 Endpoint: VoiceServer.Value.Endpoint,
-                SessionId: VoiceState.SessionId),
+                SessionId: VoiceState.SessionId,
+                ChannelId: VoiceState.VoiceChannelId?.ToString()),
         };
 
         var voiceServerName = GetVoiceServerName(VoiceServer.Value);
@@ -749,8 +750,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
             return CurrentItem;
         }
 
-        
-        return LookupTrackQueueItem(track, CurrentItem, null) 
+
+        return LookupTrackQueueItem(track, CurrentItem, null)
                ?? new TrackQueueItem(new TrackReference(track));
     }
 
