@@ -147,6 +147,8 @@ public abstract class AudioServiceBase : IAudioService, ILavalinkNodeListener
 
     public event AsyncEventHandler<ConnectionClosedEventArgs>? ConnectionClosed;
 
+    public event AsyncEventHandler<ConnectionReadyEventArgs>? ConnectionReady;
+
     protected virtual ValueTask OnTrackEndedAsync(TrackEndedEventArgs eventArgs, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -194,6 +196,13 @@ public abstract class AudioServiceBase : IAudioService, ILavalinkNodeListener
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(eventArgs);
         return WebSocketClosed.InvokeAsync(this, eventArgs);
+    }
+
+    protected virtual ValueTask OnConnectionReadyAsync(ConnectionReadyEventArgs eventArgs, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(eventArgs);
+        return ConnectionReady.InvokeAsync(this, eventArgs);
     }
 
     ValueTask ILavalinkNodeListener.OnTrackEndedAsync(TrackEndedEventArgs eventArgs, CancellationToken cancellationToken)
@@ -337,6 +346,12 @@ public abstract class AudioServiceBase : IAudioService, ILavalinkNodeListener
         ArgumentNullException.ThrowIfNull(eventArgs);
 
         return OnConnectionClosedAsync(eventArgs, cancellationToken);
+    }
+
+    ValueTask ILavalinkNodeListener.OnConnectionReadyAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return OnConnectionReadyAsync(new ConnectionReadyEventArgs(), cancellationToken);
     }
 }
 

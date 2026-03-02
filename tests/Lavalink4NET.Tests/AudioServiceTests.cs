@@ -371,6 +371,65 @@ public sealed class AudioServiceTests
     }
 
     [Fact]
+    public async Task TestConnectionReadyEventIsRaisedAsync()
+    {
+        // Arrange
+        var apiClientMock = new Mock<ILavalinkApiClient>();
+        var socketMock = new Mock<ILavalinkSocket>();
+        var discordClientMock = new Mock<IDiscordClientWrapper>();
+
+        apiClientMock
+            .SetupGet(x => x.Endpoints)
+            .Returns(new LavalinkApiEndpoints(new Uri("http://localhost/")));
+
+        var receiveChannel = Channel.CreateUnbounded<IPayload>();
+
+        var socketFactory = Mock.Of<ILavalinkSocketFactory>(
+            x => x.Create(It.IsAny<IOptions<LavalinkSocketOptions>>()) == socketMock.Object);
+
+        socketMock
+            .Setup(x => x.ReceiveAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken cancellationToken)
+                => receiveChannel.Reader.ReadAsync(cancellationToken)!);
+
+        discordClientMock
+            .Setup(x => x.WaitForReadyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ClientInformation("Mock Client", 0UL, 1));
+
+        await using var audioService = new AudioService(
+            discordClient: discordClientMock.Object,
+            apiClientProvider: CreateProvider(apiClientMock.Object),
+            playerManager: Mock.Of<IPlayerManager>(),
+            trackManager: Mock.Of<ITrackManager>(),
+            socketFactory: socketFactory!,
+            integrationManager: new IntegrationManager(),
+            loggerFactory: NullLoggerFactory.Instance,
+            options: Options.Create(new AudioServiceOptions { ReadyTimeout = TimeSpan.FromSeconds(0.5) }));
+
+        _ = audioService.StartAsync().AsTask();
+
+        // Act
+        async Task Action()
+        {
+            receiveChannel.Writer.TryWrite(new ReadyPayload(
+                SessionResumed: false,
+                SessionId: "test-session"));
+
+            await audioService!
+                .WaitForReadyAsync()
+                .ConfigureAwait(false);
+
+            await Task.Delay(100);
+        }
+
+        // Assert
+        await AssertRaisesAsync<ConnectionReadyEventArgs>(
+            attach: handler => audioService.ConnectionReady += handler,
+            detach: handler => audioService.ConnectionReady -= handler,
+            testCode: Action);
+    }
+
+    [Fact]
     public async Task TestTrackStuckDispatchesAsync()
     {
         var apiClientMock = new Mock<ILavalinkApiClient>();

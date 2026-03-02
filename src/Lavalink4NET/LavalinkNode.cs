@@ -170,7 +170,8 @@ internal sealed class LavalinkNode : IAsyncDisposable
             }
 
             _logger.Ready(Label, SessionId);
-            await SocketConnectionReady.InvokeAsync(this, EventArgs.Empty);
+            await SocketConnectionReady.InvokeAsync(this, EventArgs.Empty).ConfigureAwait(false);
+            await _serviceContext.NodeListener.OnConnectionReadyAsync(cancellationToken).ConfigureAwait(false);
         }
 
         if (SessionId is null)
