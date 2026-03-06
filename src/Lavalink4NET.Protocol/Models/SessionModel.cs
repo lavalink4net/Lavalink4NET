@@ -11,5 +11,5 @@ public sealed record class SessionModel(
 
     [property: JsonRequired]
     [property: JsonPropertyName("timeout")]
-    [property: JsonConverter(typeof(NullableDurationJsonConverter))]
+    [property: JsonConverter(typeof(NullableSecondsDurationJsonConverter))]
     TimeSpan? SessionTimeout);
