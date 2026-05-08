@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -119,6 +120,221 @@ public sealed class LavalinkPlayerTests
 
         // Assert
         Assert.Equal(PlayerState.Destroyed, player.State);
+    }
+
+    [Fact]
+    public async Task TestVoiceAutoReconnectAttemptsRejoinOn4014Async()
+    {
+        // Arrange
+        var discordClientMock = new Mock<IDiscordClientWrapper>(MockBehavior.Strict);
+
+        discordClientMock
+            .Setup(x => x.SendVoiceUpdateAsync(
+                guildId: 0UL,
+                voiceChannelId: 42UL,
+                selfDeaf: true,
+                selfMute: true,
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var playerModel = new PlayerInformationModel(
+            GuildId: 0UL,
+            CurrentTrack: null,
+            Volume: 1F,
+            IsPaused: false,
+            VoiceState: CreateVoiceState(),
+            Filters: new PlayerFilterMapModel());
+
+        var options = new LavalinkPlayerOptions
+        {
+            EnableVoiceAutoReconnect = true,
+            VoiceReconnectCooldown = TimeSpan.FromSeconds(10),
+            SelfDeaf = true,
+            SelfMute = true,
+        };
+
+        var playerProperties = CreateProperties(playerModel: playerModel, options: options, discordClientMock: discordClientMock);
+        var player = new LavalinkPlayer(playerProperties);
+
+        // Ensure we have a voice channel to re-assert.
+        var listener = (ILavalinkPlayerListener)player;
+        await listener.NotifyVoiceStateUpdatedAsync(new VoiceState(VoiceChannelId: 42UL, SessionId: "abc"));
+
+        // Act
+        await listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4014, "Disconnected.", byRemote: true);
+
+        // Assert
+        discordClientMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task TestVoiceAutoReconnectAttemptsRejoinOn4015Async()
+    {
+        // Arrange
+        var discordClientMock = new Mock<IDiscordClientWrapper>(MockBehavior.Strict);
+
+        discordClientMock
+            .Setup(x => x.SendVoiceUpdateAsync(
+                guildId: 0UL,
+                voiceChannelId: 42UL,
+                selfDeaf: false,
+                selfMute: false,
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var playerModel = new PlayerInformationModel(
+            GuildId: 0UL,
+            CurrentTrack: null,
+            Volume: 1F,
+            IsPaused: false,
+            VoiceState: CreateVoiceState(),
+            Filters: new PlayerFilterMapModel());
+
+        var options = new LavalinkPlayerOptions
+        {
+            EnableVoiceAutoReconnect = true,
+            VoiceReconnectCooldown = TimeSpan.FromSeconds(10),
+            SelfDeaf = false,
+            SelfMute = false,
+        };
+
+        var playerProperties = CreateProperties(playerModel: playerModel, options: options, discordClientMock: discordClientMock);
+        var player = new LavalinkPlayer(playerProperties);
+
+        // Ensure we have a voice channel to re-assert.
+        var listener = (ILavalinkPlayerListener)player;
+        await listener.NotifyVoiceStateUpdatedAsync(new VoiceState(VoiceChannelId: 42UL, SessionId: "abc"));
+
+        // Act
+        await listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4015, "Voice server crashed.", byRemote: true);
+
+        // Assert
+        discordClientMock.VerifyAll();
+    }
+
+    [Fact]
+    public async Task TestVoiceAutoReconnectIsSuppressedWhenDisabledAsync()
+    {
+        // Arrange
+        var discordClientMock = new Mock<IDiscordClientWrapper>(MockBehavior.Strict);
+        var playerModel = new PlayerInformationModel(
+            GuildId: 0UL,
+            CurrentTrack: null,
+            Volume: 1F,
+            IsPaused: false,
+            VoiceState: CreateVoiceState(),
+            Filters: new PlayerFilterMapModel());
+
+        var options = new LavalinkPlayerOptions
+        {
+            EnableVoiceAutoReconnect = false,
+            VoiceReconnectCooldown = TimeSpan.FromSeconds(10),
+            SelfDeaf = false,
+            SelfMute = false,
+        };
+
+        var playerProperties = CreateProperties(playerModel: playerModel, options: options, discordClientMock: discordClientMock);
+        var player = new LavalinkPlayer(playerProperties);
+        var listener = (ILavalinkPlayerListener)player;
+        await listener.NotifyVoiceStateUpdatedAsync(new VoiceState(VoiceChannelId: 42UL, SessionId: "abc"));
+
+        // Act
+        await listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4014, "Disconnected.", byRemote: true);
+
+        // Assert
+        discordClientMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TestVoiceAutoReconnectIsRateLimitedByCooldownAsync()
+    {
+        // Arrange
+        var discordClientMock = new Mock<IDiscordClientWrapper>(MockBehavior.Strict);
+
+        discordClientMock
+            .Setup(x => x.SendVoiceUpdateAsync(
+                guildId: 0UL,
+                voiceChannelId: 42UL,
+                selfDeaf: false,
+                selfMute: false,
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask)
+            .Verifiable();
+
+        var playerModel = new PlayerInformationModel(
+            GuildId: 0UL,
+            CurrentTrack: null,
+            Volume: 1F,
+            IsPaused: false,
+            VoiceState: CreateVoiceState(),
+            Filters: new PlayerFilterMapModel());
+
+        var options = new LavalinkPlayerOptions
+        {
+            EnableVoiceAutoReconnect = true,
+            VoiceReconnectCooldown = TimeSpan.FromMinutes(1),
+            SelfDeaf = false,
+            SelfMute = false,
+        };
+
+        var playerProperties = CreateProperties(playerModel: playerModel, options: options, discordClientMock: discordClientMock);
+        var player = new LavalinkPlayer(playerProperties);
+        var listener = (ILavalinkPlayerListener)player;
+        await listener.NotifyVoiceStateUpdatedAsync(new VoiceState(VoiceChannelId: 42UL, SessionId: "abc"));
+
+        // Act
+        await listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4014, "Disconnected.", byRemote: true);
+        await listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4014, "Disconnected.", byRemote: true);
+
+        // Assert
+        discordClientMock.Verify(x => x.SendVoiceUpdateAsync(0UL, 42UL, false, false, It.IsAny<CancellationToken>()), Times.Once);
+        discordClientMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TestVoiceAutoReconnectCooldownIsThreadSafeAsync()
+    {
+        // Arrange
+        var discordClientMock = new Mock<IDiscordClientWrapper>(MockBehavior.Strict);
+
+        discordClientMock
+            .Setup(x => x.SendVoiceUpdateAsync(
+                guildId: 0UL,
+                voiceChannelId: 42UL,
+                selfDeaf: false,
+                selfMute: false,
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var playerModel = new PlayerInformationModel(
+            GuildId: 0UL,
+            CurrentTrack: null,
+            Volume: 1F,
+            IsPaused: false,
+            VoiceState: CreateVoiceState(),
+            Filters: new PlayerFilterMapModel());
+
+        var options = new LavalinkPlayerOptions
+        {
+            EnableVoiceAutoReconnect = true,
+            VoiceReconnectCooldown = TimeSpan.FromMinutes(5),
+            SelfDeaf = false,
+            SelfMute = false,
+        };
+
+        var playerProperties = CreateProperties(playerModel: playerModel, options: options, discordClientMock: discordClientMock);
+        var player = new LavalinkPlayer(playerProperties);
+        var listener = (ILavalinkPlayerListener)player;
+        await listener.NotifyVoiceStateUpdatedAsync(new VoiceState(VoiceChannelId: 42UL, SessionId: "abc"));
+
+        // Act
+        await Task.WhenAll(
+            listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4014, "Disconnected.", byRemote: true).AsTask(),
+            listener.NotifyWebSocketClosedAsync((WebSocketCloseStatus)4014, "Disconnected.", byRemote: true).AsTask());
+
+        // Assert
+        discordClientMock.Verify(x => x.SendVoiceUpdateAsync(0UL, 42UL, false, false, It.IsAny<CancellationToken>()), Times.Once);
+        discordClientMock.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -826,7 +1042,8 @@ public sealed class LavalinkPlayerTests
         PlayerInformationModel playerModel,
         PlayerInformationModel? mutatedPlayerModel = null,
         LavalinkPlayerOptions? options = null,
-        Action<PlayerUpdateProperties>? updateAction = null)
+        Action<PlayerUpdateProperties>? updateAction = null,
+        Mock<IDiscordClientWrapper>? discordClientMock = null)
     {
         var sessionId = "abc";
         var apiClientMock = new Mock<ILavalinkApiClient>(MockBehavior.Strict);
@@ -844,7 +1061,7 @@ public sealed class LavalinkPlayerTests
             .Setup(x => x.DestroyPlayerAsync("abc", 0, It.IsAny<CancellationToken>()))
             .Returns(ValueTask.CompletedTask);
 
-        var discordClientMock = new Mock<IDiscordClientWrapper>();
+        discordClientMock ??= new Mock<IDiscordClientWrapper>();
 
         var sessionProvider = Mock.Of<ILavalinkSessionProvider>(x
             => x.GetSessionAsync(playerModel.GuildId, It.IsAny<CancellationToken>())

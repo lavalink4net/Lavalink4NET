@@ -10,6 +10,17 @@ public record class LavalinkPlayerOptions
 
     public bool DisconnectOnDestroy { get; set; } = true;
 
+    /// <summary>
+    ///     Gets or sets a value indicating whether Lavalink4NET should attempt to recover voice connectivity
+    ///     by re-sending a voice state update when Discord closes the voice websocket (e.g. 4014/4015).
+    /// </summary>
+    public bool EnableVoiceAutoReconnect { get; set; } = true;
+
+    /// <summary>
+    ///     Gets or sets the minimum time between automatic voice reconnect attempts.
+    /// </summary>
+    public TimeSpan VoiceReconnectCooldown { get; set; } = TimeSpan.FromSeconds(10);
+
     public string? Label { get; set; }
 
     public ITrackQueueItem? InitialTrack { get; set; }

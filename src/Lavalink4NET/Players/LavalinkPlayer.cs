@@ -29,6 +29,11 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     private readonly ISystemClock _systemClock;
     private readonly bool _disconnectOnStop;
     private readonly IPlayerLifecycle _playerLifecycle;
+    private readonly bool _enableVoiceAutoReconnect;
+    private readonly TimeSpan _voiceReconnectCooldown;
+    private readonly bool _selfDeaf;
+    private readonly bool _selfMute;
+    private long _lastVoiceReconnectAttemptTicks;
     private int _disposed;
     private DateTimeOffset _syncedAt;
     private TimeSpan _unstretchedRelativePosition;
@@ -65,6 +70,12 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 
         _disconnectOnDestroy = properties.Options.Value.DisconnectOnDestroy;
         _disconnectOnStop = properties.Options.Value.DisconnectOnStop;
+
+        _enableVoiceAutoReconnect = properties.Options.Value.EnableVoiceAutoReconnect;
+        _voiceReconnectCooldown = properties.Options.Value.VoiceReconnectCooldown;
+        _selfDeaf = properties.Options.Value.SelfDeaf;
+        _selfMute = properties.Options.Value.SelfMute;
+        _lastVoiceReconnectAttemptTicks = 0;
 
         VoiceServer = new VoiceServer(properties.InitialState.VoiceState.Token, properties.InitialState.VoiceState.Endpoint);
         VoiceState = new VoiceState(properties.VoiceChannelId, properties.InitialState.VoiceState.SessionId);
@@ -432,7 +443,62 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 #endif
     }
 
-    protected virtual ValueTask NotifyWebSocketClosedAsync(WebSocketCloseStatus closeStatus, string reason, bool byRemote = false, CancellationToken cancellationToken = default) => default;
+    protected virtual async ValueTask NotifyWebSocketClosedAsync(WebSocketCloseStatus closeStatus, string reason, bool byRemote = false, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Lavalink reports Discord voice websocket close codes as the websocket close status.
+        // Recoverable cases commonly include:
+        // - 4014: Disconnected
+        // - 4015: Voice server crashed
+        if (!byRemote || !_enableVoiceAutoReconnect)
+        {
+            return;
+        }
+
+        // Player is already destroyed/disposed.
+        if (_disposed is not 0)
+        {
+            return;
+        }
+
+        var closeCode = (int)closeStatus;
+        if (closeCode is not 4014 and not 4015)
+        {
+            return;
+        }
+
+        // If we intentionally left the channel (voice state is null), don't attempt to rejoin.
+        if (VoiceState.VoiceChannelId is null)
+        {
+            return;
+        }
+
+        // Avoid rejoin loops: only attempt once per cooldown window.
+        var nowTicks = _systemClock.UtcNow.UtcTicks;
+        var cooldownTicks = _voiceReconnectCooldown.Ticks;
+
+        // Atomically claim this attempt. This uses CAS to avoid concurrent callers
+        // both passing the cooldown check and sending multiple voice updates.
+        while (true)
+        {
+            var lastTicks = Interlocked.Read(ref _lastVoiceReconnectAttemptTicks);
+
+            if (cooldownTicks > 0 && lastTicks != 0 && nowTicks - lastTicks < cooldownTicks)
+            {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(ref _lastVoiceReconnectAttemptTicks, nowTicks, lastTicks) == lastTicks)
+            {
+                break;
+            }
+        }
+
+        await DiscordClient
+            .SendVoiceUpdateAsync(GuildId, VoiceChannelId, selfDeaf: _selfDeaf, selfMute: _selfMute, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+    }
 
     protected virtual ValueTask NotifyTrackEndedAsync(ITrackQueueItem track, TrackEndReason endReason, CancellationToken cancellationToken = default) => default;
 
