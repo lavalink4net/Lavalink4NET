@@ -24,10 +24,10 @@
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
         <PackageVersion Include="Moq" Version="4.20.72" />
-        <PackageVersion Include="NetCord.Hosting.Services" Version="1.0.0-alpha.448" />
-        <PackageVersion Include="NetCord.Hosting" Version="1.0.0-alpha.448" />
-        <PackageVersion Include="NetCord.Services" Version="1.0.0-alpha.448" />
-        <PackageVersion Include="NetCord" Version="1.0.0-alpha.448" />
+        <PackageVersion Include="NetCord.Hosting.Services" Version="1.0.0-beta.7" />
+        <PackageVersion Include="NetCord.Hosting" Version="1.0.0-beta.7" />
+        <PackageVersion Include="NetCord.Services" Version="1.0.0-beta.7" />
+        <PackageVersion Include="NetCord" Version="1.0.0-beta.7" />
         <PackageVersion Include="Remora.Discord.Commands" Version="30.0.0" />
         <PackageVersion Include="Remora.Discord.Hosting" Version="7.0.1" />
         <PackageVersion Include="Remora.Discord" Version="2025.2.0" />
