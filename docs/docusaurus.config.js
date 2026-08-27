@@ -11,9 +11,9 @@ const config = {
   favicon: 'icon.png',
 
   // Set the production url of your site here
-  url: 'https://your-docusaurus-test-site.com',
+  url: 'https://lavalink4net.com/',
   baseUrl: '/',
-  organizationName: 'angelobreuer',
+  organizationName: 'lavalink4net',
   projectName: 'Lavalink4NET',
 
   onBrokenLinks: 'throw',
